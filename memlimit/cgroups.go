@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	cgroupPath       = "/proc/self/cgroup"
 	cgroupMountPoint = "/sys/fs/cgroup"
 )
 
@@ -40,7 +39,12 @@ func FromCgroupV1() (uint64, error) {
 }
 
 func FromCgroupV2() (uint64, error) {
-	m, err := v2.LoadManager(cgroupMountPoint, cgroupPath)
+	path, err := v2.NestedGroupPath("")
+	if err != nil {
+		return 0, err
+	}
+
+	m, err := v2.LoadManager(cgroupMountPoint, path)
 	if err != nil {
 		return 0, err
 	}
