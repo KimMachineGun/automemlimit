@@ -17,7 +17,7 @@ go get -u github.com/KimMachineGun/automemlimit
 ```go
 package main
 
-// It sets `GOMEMLIMIT` to 90% of memory quota for 
+// By default, it sets `GOMEMLIMIT` to 90% of memory quota.
 // You can configure it with `AUTOMEMLIMIT=(0,1]` environment variable.
 import _ "github.com/KimMachineGun/automemlimit"
 ```
