@@ -17,8 +17,8 @@ go get -u github.com/KimMachineGun/automemlimit
 ```go
 package main
 
-// By default, it sets `GOMEMLIMIT` to 90% of memory quota.
-// You can configure it with `AUTOMEMLIMIT=(0,1]` environment variable.
+// By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
+// You can find more details of its behavior from the doc comment of memlimit.SetGoMemLimitWithEnv.
 import _ "github.com/KimMachineGun/automemlimit"
 ```
 
@@ -30,6 +30,7 @@ package main
 import "github.com/KimMachineGun/automemlimit/memlimit"
 
 func init() {
+	memlimit.SetGoMemLimitWithEnv()
 	memlimit.SetGoMemLimit(0.9)
 	memlimit.SetGoMemLimitWithProvider(memlimit.Limit(1024*1024), 0.9)
 	memlimit.SetGoMemLimitWithProvider(memlimit.FromCgroup, 0.9)

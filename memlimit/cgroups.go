@@ -12,6 +12,7 @@ const (
 	cgroupMountPoint = "/sys/fs/cgroup"
 )
 
+// FromCgroup returns the memory limit based on the cgroups version on this system.
 func FromCgroup() (uint64, error) {
 	switch cgroups.Mode() {
 	case cgroups.Legacy:
@@ -22,6 +23,7 @@ func FromCgroup() (uint64, error) {
 	return 0, ErrNoCgroup
 }
 
+// FromCgroupV1 returns the memory limit from the cgroup v1.
 func FromCgroupV1() (uint64, error) {
 	cg, err := cgroups.Load(cgroups.SingleSubsystem(cgroups.V1, cgroups.Memory), cgroups.RootPath)
 	if err != nil {
@@ -38,6 +40,7 @@ func FromCgroupV1() (uint64, error) {
 	return metrics.Memory.HierarchicalMemoryLimit, nil
 }
 
+// FromCgroupV2 returns the memory limit from the cgroup v2.
 func FromCgroupV2() (uint64, error) {
 	path, err := v2.NestedGroupPath("")
 	if err != nil {
