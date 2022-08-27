@@ -1,10 +1,10 @@
-name: Go
+name: Test
 
 on: [ push, pull_request ]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test-ubuntu-20_04:
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v3
@@ -12,3 +12,37 @@ jobs:
       - name: Docker Info
         run: |
           docker info
+
+      - name: Pull golang image
+        run: |
+          docker pull golang:1.19
+
+      - name: Run tests in Go container (1000m)
+        run: |
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.19 go test -v ./... -expected=1048576000
+
+      - name: Run tests in Go container (4321m)
+        run: |
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
+
+  test-ubuntu-22_04:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Docker Info
+        run: |
+          docker info
+
+      - name: Pull golang image
+        run: |
+          docker pull golang:1.19
+
+      - name: Run tests in Go container (1000m)
+        run: |
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.19 go test -v ./... -expected=1048576000
+
+      - name: Run tests in Go container (4321m)
+        run: |
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
