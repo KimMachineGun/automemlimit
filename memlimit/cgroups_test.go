@@ -4,27 +4,9 @@
 package memlimit
 
 import (
-	"flag"
-	"log"
-	"os"
 	"testing"
 
 	"github.com/containerd/cgroups"
-)
-
-func TestMain(m *testing.M) {
-	flag.Uint64Var(&expected, "expected", 0, "Expected cgroup's memory limit")
-	flag.Parse()
-
-	cgVersion = cgroups.Mode()
-	log.Println("Cgroups version:", cgVersion)
-
-	os.Exit(m.Run())
-}
-
-var (
-	cgVersion cgroups.CGMode
-	expected  uint64
 )
 
 func TestFromCgroup(t *testing.T) {
