@@ -1,6 +1,7 @@
 # automemlimit
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/KimMachineGun/automemlimit.svg)](https://pkg.go.dev/github.com/KimMachineGun/automemlimit)
+[![Go Report Card](https://goreportcard.com/badge/github.com/KimMachineGun/automemlimit)](https://goreportcard.com/report/github.com/KimMachineGun/automemlimit)
 
 Automatically set `GOMEMLIMIT` to match Linux [cgroups(7)](https://man7.org/linux/man-pages/man7/cgroups.7.html) memory limit.
 
