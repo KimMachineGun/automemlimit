@@ -11,7 +11,7 @@ See more details about `GOMEMLIMIT` [here](https://tip.golang.org/doc/gc-guide#M
 ## Installation
 
 ```shell
-go get -u github.com/KimMachineGun/automemlimit
+go get github.com/KimMachineGun/automemlimit@latest
 ```
 
 ## Usage
