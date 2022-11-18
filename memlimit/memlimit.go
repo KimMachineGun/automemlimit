@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -85,9 +86,16 @@ func SetGoMemLimitWithProvider(provider Provider, ratio float64) (int64, error) 
 	if err != nil {
 		return 0, err
 	}
-	goMemLimit := int64(ratio * float64(limit))
-	debug.SetMemoryLimit(goMemLimit)
-	return goMemLimit, nil
+
+	// If no hard memory limit is set, the provider will likely return something like math.MaxUint64,
+	// but that may not fit into an int64 used by debug.SetMemoryLimit().
+	if limit < math.MaxInt64 {
+		goMemLimit := int64(ratio * float64(limit))
+		debug.SetMemoryLimit(goMemLimit)
+		return goMemLimit, nil
+	} else {
+		return 0, errors.New("limit returned by provider is too high")
+	}
 }
 
 // Limit is a helper Provider function that returns the given limit.
