@@ -48,7 +48,7 @@ func TestSetGoMemLimit(t *testing.T) {
 	}
 }
 
-func TestSetGoMemLimitWithProvider(t *testing.T) {
+func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 	type args struct {
 		provider Provider
 		ratio    float64
@@ -85,24 +85,6 @@ func TestSetGoMemLimitWithProvider(t *testing.T) {
 			},
 			want:    0,
 			wantErr: ErrCgroupsNotSupported,
-		},
-		{
-			name: "Limit_0.5",
-			args: args{
-				provider: Limit(1024 * 1024 * 1024),
-				ratio:    0.5,
-			},
-			want:    536870912,
-			wantErr: nil,
-		},
-		{
-			name: "Limit_0.9",
-			args: args{
-				provider: Limit(1024 * 1024 * 1024),
-				ratio:    0.9,
-			},
-			want:    966367641,
-			wantErr: nil,
 		},
 	}
 	for _, tt := range tests {
