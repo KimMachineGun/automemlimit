@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -85,11 +86,17 @@ func SetGoMemLimitWithProvider(provider Provider, ratio float64) (int64, error) 
 	if err != nil {
 		return 0, err
 	}
-	goMemLimit := int64(ratio * float64(limit))
+	goMemLimit := cappedFloat2Int(float64(limit) * ratio)
 	debug.SetMemoryLimit(goMemLimit)
 	return goMemLimit, nil
 }
 
+func cappedFloat2Int(f float64) int64 {
+	if f > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(f)
+}
 // Limit is a helper Provider function that returns the given limit.
 func Limit(limit uint64) func() (uint64, error) {
 	return func() (uint64, error) {
