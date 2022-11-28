@@ -30,7 +30,7 @@ func FromCgroupV1() (uint64, error) {
 		return 0, err
 	}
 
-	metrics, err := cg.Stat()
+	metrics, err := cg.Stat(cgroups.IgnoreNotExist)
 	if err != nil {
 		return 0, err
 	} else if metrics.Memory == nil {
