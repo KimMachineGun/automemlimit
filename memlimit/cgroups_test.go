@@ -6,7 +6,7 @@ package memlimit
 import (
 	"testing"
 
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3"
 )
 
 func TestFromCgroup(t *testing.T) {

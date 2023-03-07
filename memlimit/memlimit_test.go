@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3"
 )
 
 var (
