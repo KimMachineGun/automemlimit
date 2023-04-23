@@ -40,11 +40,13 @@ func FromCgroupV1() (uint64, error) {
 	metrics, err := cg.Stat(cgroup1.IgnoreNotExist)
 	if err != nil {
 		return 0, err
-	} else if metrics.Memory == nil {
-		return 0, ErrNoLimit
 	}
 
-	return metrics.Memory.HierarchicalMemoryLimit, nil
+	if limit := metrics.GetMemory().GetHierarchicalMemoryLimit(); limit != 0 {
+		return limit, nil
+	}
+
+	return 0, ErrNoLimit
 }
 
 // FromCgroupHybrid returns the memory limit from the cgroup v1 or v2.
@@ -79,9 +81,11 @@ func fromCgroupV2(mountPoint string) (uint64, error) {
 	stats, err := m.Stat()
 	if err != nil {
 		return 0, err
-	} else if stats.Memory == nil || stats.Memory.UsageLimit == 0 {
-		return 0, ErrNoLimit
 	}
 
-	return stats.Memory.UsageLimit, nil
+	if limit := stats.GetMemory().GetUsageLimit(); limit != 0 {
+		return limit, nil
+	}
+
+	return 0, ErrNoLimit
 }
