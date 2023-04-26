@@ -78,6 +78,15 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			wantErr: ErrCgroupsNotSupported,
 		},
 		{
+			name: "FromCgroupHybrid",
+			args: args{
+				provider: fromCgroupHybrid,
+				ratio:    0.9,
+			},
+			want:    0,
+			wantErr: ErrCgroupsNotSupported,
+		},
+		{
 			name: "FromCgroupV2",
 			args: args{
 				provider: FromCgroupV2,

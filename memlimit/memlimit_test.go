@@ -126,6 +126,16 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			skip:    cgVersion != cgroups.Legacy,
 		},
 		{
+			name: "FromCgroupHybrid",
+			args: args{
+				provider: fromCgroupHybrid,
+				ratio:    0.9,
+			},
+			want:    int64(float64(expected) * 0.9),
+			wantErr: nil,
+			skip:    cgVersion != cgroups.Hybrid,
+		},
+		{
 			name: "FromCgroupV2",
 			args: args{
 				provider: FromCgroupV2,
@@ -133,7 +143,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.9),
 			wantErr: nil,
-			skip:    cgVersion != cgroups.Hybrid && cgVersion != cgroups.Unified,
+			skip:    cgVersion != cgroups.Unified,
 		},
 	}
 	for _, tt := range tests {

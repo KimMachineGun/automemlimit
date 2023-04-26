@@ -25,7 +25,7 @@ func TestFromCgroup(t *testing.T) {
 
 func TestFromCgroupV1(t *testing.T) {
 	if cgVersion != cgroups.Legacy {
-		t.Skip("cgroups v1 is not supported")
+		t.Skip()
 	}
 	limit, err := FromCgroupV1()
 	if err != nil {
@@ -36,9 +36,22 @@ func TestFromCgroupV1(t *testing.T) {
 	}
 }
 
+func TestFromCgroupHybrid(t *testing.T) {
+	if cgVersion != cgroups.Hybrid {
+		t.Skip()
+	}
+	limit, err := fromCgroupHybrid()
+	if err != nil {
+		t.Fatalf("fromCgroupHybrid() error = %v, wantErr %v", err, nil)
+	}
+	if limit != expected {
+		t.Fatalf("fromCgroupHybrid() got = %v, want %v", limit, expected)
+	}
+}
+
 func TestFromCgroupV2(t *testing.T) {
-	if cgVersion != cgroups.Hybrid && cgVersion != cgroups.Unified {
-		t.Skip("cgroups v2 is not supported")
+	if cgVersion != cgroups.Unified {
+		t.Skip()
 	}
 	limit, err := FromCgroupV2()
 	if err != nil {
