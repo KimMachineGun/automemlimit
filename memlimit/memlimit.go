@@ -57,9 +57,9 @@ func WithRatio(ratio float64) Option {
 }
 
 // WithEnv configure memory limit from environment variable.
-func WithEnv(flag bool) Option {
+func WithEnv() Option {
 	return Option(func(cfg *config) {
-		cfg.env = flag
+		cfg.env = true
 	})
 }
 
