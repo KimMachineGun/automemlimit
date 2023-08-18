@@ -2,6 +2,7 @@ package memlimit
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -40,32 +41,32 @@ type Option func(cfg *config)
 // WithRatio configures the ratio of the memory limit to set as GOMEMLIMIT.
 // By default `0.9`.
 func WithRatio(ratio float64) Option {
-	return Option(func(cfg *config) {
+	return func(cfg *config) {
 		cfg.ratio = ratio
-	})
+	}
 }
 
 // WithEnv configures whether to use environment variables.
 // By default `false`.
 func WithEnv() Option {
-	return Option(func(cfg *config) {
+	return func(cfg *config) {
 		cfg.env = true
-	})
+	}
 }
 
 // WithProvider configures the provider.
 // By default `FromCgroup`.
 func WithProvider(provider Provider) Option {
-	return Option(func(cfg *config) {
+	return func(cfg *config) {
 		cfg.provider = provider
-	})
+	}
 }
 
-// SetGoMemLimitWithOptions sets GOMEMLIMIT with options.
+// SetGoMemLimitWithOpts sets GOMEMLIMIT with options.
 // - WithRatio
 // - WithEnv (see more `SetGoMemLimitWithEnv`)
 // - WithProvider
-func SetGoMemLimitWithOptions(opts ...Option) {
+func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	cfg := &config{
 		logger:   log.New(io.Discard, "", log.LstdFlags),
 		ratio:    defaultAUTOMEMLIMIT,
@@ -78,12 +79,20 @@ func SetGoMemLimitWithOptions(opts ...Option) {
 	for _, opt := range opts {
 		opt(cfg)
 	}
+	defer func() {
+		if _err != nil {
+			cfg.logger.Println(_err)
+		}
+	}()
 
 	snapshot := debug.SetMemoryLimit(-1)
 	defer func() {
 		err := recover()
 		if err != nil {
-			cfg.logger.Printf("panic during setting the Go's memory limit, rolling back to previous value %d: %v\n", snapshot, err)
+			if _err != nil {
+				cfg.logger.Println(_err)
+			}
+			_err = fmt.Errorf("panic during setting the Go's memory limit, rolling back to previous value %d: %v", snapshot, err)
 			debug.SetMemoryLimit(snapshot)
 		}
 	}()
@@ -101,23 +110,22 @@ func SetGoMemLimitWithOptions(opts ...Option) {
 		}
 		_ratio, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			cfg.logger.Printf("cannot parse AUTOMEMLIMIT: %s\n", val)
-			return
+			return 0, fmt.Errorf("cannot parse AUTOMEMLIMIT: %s", val)
 		}
 		ratio = _ratio
 	}
 	if ratio <= 0 || ratio > 1 {
-		cfg.logger.Printf("invalid AUTOMEMLIMIT: %f\n", ratio)
-		return
+		return 0, fmt.Errorf("invalid AUTOMEMLIMIT: %f", ratio)
 	}
 
 	limit, err := SetGoMemLimitWithProvider(cfg.provider, ratio)
 	if err != nil {
-		cfg.logger.Printf("failed to set GOMEMLIMIT: %v\n", err)
-		return
+		return 0, fmt.Errorf("failed to set GOMEMLIMIT: %w", err)
 	}
 
 	cfg.logger.Printf("GOMEMLIMIT=%d\n", limit)
+
+	return limit, nil
 }
 
 // SetGoMemLimitWithEnv sets GOMEMLIMIT with the value from the environment variable.
@@ -127,7 +135,7 @@ func SetGoMemLimitWithOptions(opts ...Option) {
 // If AUTOMEMLIMIT is not set, it defaults to 0.9. (10% is the headroom for memory sources the Go runtime is unaware of.)
 // If GOMEMLIMIT is already set or AUTOMEMLIMIT=off, this function does nothing.
 func SetGoMemLimitWithEnv() {
-	SetGoMemLimitWithOptions(WithEnv())
+	_, _ = SetGoMemLimitWithOpts(WithEnv())
 }
 
 // SetGoMemLimit sets GOMEMLIMIT with the value from the cgroup's memory limit and given ratio.
