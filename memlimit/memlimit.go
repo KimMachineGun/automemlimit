@@ -39,7 +39,7 @@ type config struct {
 type Option func(cfg *config)
 
 // WithRatio configures the ratio of the memory limit to set as GOMEMLIMIT.
-// By default `0.9`.
+// Default: 0.9
 func WithRatio(ratio float64) Option {
 	return func(cfg *config) {
 		cfg.ratio = ratio
@@ -47,7 +47,7 @@ func WithRatio(ratio float64) Option {
 }
 
 // WithEnv configures whether to use environment variables.
-// By default `false`.
+// Default: false
 func WithEnv() Option {
 	return func(cfg *config) {
 		cfg.env = true
@@ -55,7 +55,7 @@ func WithEnv() Option {
 }
 
 // WithProvider configures the provider.
-// By default `FromCgroup`.
+// Default: FromCgroup
 func WithProvider(provider Provider) Option {
 	return func(cfg *config) {
 		cfg.provider = provider
@@ -63,9 +63,10 @@ func WithProvider(provider Provider) Option {
 }
 
 // SetGoMemLimitWithOpts sets GOMEMLIMIT with options.
-// - WithRatio
-// - WithEnv (see more `SetGoMemLimitWithEnv`)
-// - WithProvider
+// Options:
+//   - WithRatio
+//   - WithEnv (see more SetGoMemLimitWithEnv)
+//   - WithProvider
 func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	cfg := &config{
 		logger:   log.New(io.Discard, "", log.LstdFlags),
