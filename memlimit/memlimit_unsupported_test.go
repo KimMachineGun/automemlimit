@@ -80,7 +80,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 		{
 			name: "FromCgroupHybrid",
 			args: args{
-				provider: fromCgroupHybrid,
+				provider: FromCgroupHybrid,
 				ratio:    0.9,
 			},
 			want:    0,

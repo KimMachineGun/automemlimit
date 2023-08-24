@@ -40,12 +40,12 @@ func TestFromCgroupHybrid(t *testing.T) {
 	if cgVersion != cgroups.Hybrid {
 		t.Skip()
 	}
-	limit, err := fromCgroupHybrid()
+	limit, err := FromCgroupHybrid()
 	if err != nil {
-		t.Fatalf("fromCgroupHybrid() error = %v, wantErr %v", err, nil)
+		t.Fatalf("FromCgroupHybrid() error = %v, wantErr %v", err, nil)
 	}
 	if limit != expected {
-		t.Fatalf("fromCgroupHybrid() got = %v, want %v", limit, expected)
+		t.Fatalf("FromCgroupHybrid() got = %v, want %v", limit, expected)
 	}
 }
 

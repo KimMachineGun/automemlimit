@@ -28,12 +28,12 @@ func TestFromCgroupV1(t *testing.T) {
 }
 
 func TestFromCgroupHybrid(t *testing.T) {
-	limit, err := fromCgroupHybrid()
+	limit, err := FromCgroupHybrid()
 	if err != ErrCgroupsNotSupported {
-		t.Fatalf("fromCgroupHybrid() error = %v, wantErr %v", err, ErrCgroupsNotSupported)
+		t.Fatalf("FromCgroupHybrid() error = %v, wantErr %v", err, ErrCgroupsNotSupported)
 	}
 	if limit != 0 {
-		t.Fatalf("fromCgroupHybrid() got = %v, want %v", limit, 0)
+		t.Fatalf("FromCgroupHybrid() got = %v, want %v", limit, 0)
 	}
 }
 
