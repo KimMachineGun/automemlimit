@@ -104,14 +104,14 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 
 	if val, ok := os.LookupEnv(envGOMEMLIMIT); ok {
 		cfg.logger.Printf("GOMEMLIMIT is set already, skipping: %s\n", val)
-		return
+		return 0, nil
 	}
 
 	ratio := cfg.ratio
 	if val, ok := os.LookupEnv(envAUTOMEMLIMIT); ok {
 		if val == "off" {
 			cfg.logger.Printf("AUTOMEMLIMIT is set to off, skipping\n")
-			return
+			return 0, nil
 		}
 		_ratio, err := strconv.ParseFloat(val, 64)
 		if err != nil {
