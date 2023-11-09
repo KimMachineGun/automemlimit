@@ -1,4 +1,4 @@
-module github.com/KimMachineGun/automemlimit/examples
+module github.com/KimMachineGun/automemlimit/examples/gosigar
 
 go 1.21
 
