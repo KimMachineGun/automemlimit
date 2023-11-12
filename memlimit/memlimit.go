@@ -155,12 +155,12 @@ func setGoMemLimit(provider Provider) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	capped := cap(limit)
+	capped := cappedU64ToI64(limit)
 	debug.SetMemoryLimit(capped)
 	return capped, nil
 }
 
-func cap(limit uint64) int64 {
+func cappedU64ToI64(limit uint64) int64 {
 	if limit > math.MaxInt64 {
 		return math.MaxInt64
 	}
