@@ -9,6 +9,9 @@ import (
 	"os"
 	"runtime/debug"
 	"strconv"
+
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 )
 
 const (
@@ -29,7 +32,7 @@ var (
 )
 
 type config struct {
-	logger   *log.Logger
+	logger   logr.Logger
 	ratio    float64
 	env      bool
 	provider Provider
@@ -65,6 +68,15 @@ func WithProvider(provider Provider) Option {
 	}
 }
 
+// WithLogger configures the logger.
+//
+// Default: logr.NewWithOptions(log.New(io.Discard, "", log.LstdFlags), stdr.Options{LogCaller: stdr.Info})
+func WithLogger(logger logr.Logger) Option {
+	return func(cfg *config) {
+		cfg.logger = logger
+	}
+}
+
 // SetGoMemLimitWithOpts sets GOMEMLIMIT with options.
 //
 // Options:
@@ -73,20 +85,20 @@ func WithProvider(provider Provider) Option {
 //   - WithProvider
 func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	cfg := &config{
-		logger:   log.New(io.Discard, "", log.LstdFlags),
+		logger:   stdr.NewWithOptions(log.New(io.Discard, "", log.LstdFlags), stdr.Options{LogCaller: stdr.Info}),
 		ratio:    defaultAUTOMEMLIMIT,
 		env:      false,
 		provider: FromCgroup,
 	}
 	if os.Getenv(envAUTOMEMLIMIT_DEBUG) == "true" {
-		cfg.logger = log.Default()
+		cfg.logger = stdr.NewWithOptions(log.Default(), stdr.Options{LogCaller: stdr.All})
 	}
 	for _, opt := range opts {
 		opt(cfg)
 	}
 	defer func() {
 		if _err != nil {
-			cfg.logger.Println(_err)
+			cfg.logger.Info("error", _err)
 		}
 	}()
 
@@ -95,7 +107,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 		err := recover()
 		if err != nil {
 			if _err != nil {
-				cfg.logger.Println(_err)
+				cfg.logger.Info("error", _err)
 			}
 			_err = fmt.Errorf("panic during setting the Go's memory limit, rolling back to previous value %d: %v", snapshot, err)
 			debug.SetMemoryLimit(snapshot)
@@ -103,14 +115,14 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	}()
 
 	if val, ok := os.LookupEnv(envGOMEMLIMIT); ok {
-		cfg.logger.Printf("GOMEMLIMIT is set already, skipping: %s\n", val)
+		cfg.logger.Info(fmt.Sprintf("GOMEMLIMIT is set already, skipping: %s\n", val))
 		return 0, nil
 	}
 
 	ratio := cfg.ratio
 	if val, ok := os.LookupEnv(envAUTOMEMLIMIT); ok {
 		if val == "off" {
-			cfg.logger.Printf("AUTOMEMLIMIT is set to off, skipping\n")
+			cfg.logger.Info("AUTOMEMLIMIT is set to off, skipping")
 			return 0, nil
 		}
 		_ratio, err := strconv.ParseFloat(val, 64)
@@ -125,7 +137,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 		return 0, fmt.Errorf("failed to set GOMEMLIMIT: %w", err)
 	}
 
-	cfg.logger.Printf("GOMEMLIMIT=%d\n", limit)
+	cfg.logger.Info(fmt.Sprintf("GOMEMLIMIT=%d\n", limit))
 
 	return limit, nil
 }
