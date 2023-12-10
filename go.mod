@@ -1,6 +1,6 @@
 module github.com/KimMachineGun/automemlimit
 
-go 1.19
+go 1.21.0
 
 require github.com/containerd/cgroups/v3 v3.0.1
 

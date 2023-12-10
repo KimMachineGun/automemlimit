@@ -1,8 +1,6 @@
 module github.com/KimMachineGun/automemlimit/examples/gosigar
 
-go 1.21
-
-toolchain go1.21.0
+go 1.21.0
 
 require (
 	github.com/KimMachineGun/automemlimit v0.0.0
