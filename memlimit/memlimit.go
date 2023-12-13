@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	envGOMEMLIMIT         = "GOMEMLIMIT"
-	envAUTOMEMLIMIT       = "AUTOMEMLIMIT"
+	envGOMEMLIMIT   = "GOMEMLIMIT"
+	envAUTOMEMLIMIT = "AUTOMEMLIMIT"
+	// Deprecated: use memlimit.WithLogger instead
 	envAUTOMEMLIMIT_DEBUG = "AUTOMEMLIMIT_DEBUG"
 
 	defaultAUTOMEMLIMIT = 0.9
@@ -64,9 +65,13 @@ func WithProvider(provider Provider) Option {
 	}
 }
 
+// WithLogger configures the logger.
+// It automatically attaches the "package" attribute to the logs.
+//
+// Default: slog.New(noopLogger{})
 func WithLogger(logger *slog.Logger) Option {
 	return func(cfg *config) {
-		cfg.logger = logger
+		cfg.logger = logger.With(slog.String("package", "memlimit"))
 	}
 }
 
@@ -76,25 +81,25 @@ func WithLogger(logger *slog.Logger) Option {
 //   - WithRatio
 //   - WithEnv (see more SetGoMemLimitWithEnv)
 //   - WithProvider
+//   - WithLogger
 func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	cfg := &config{
-		logger:   slog.Default(),
+		logger:   slog.New(noopLogger{}),
 		ratio:    defaultAUTOMEMLIMIT,
 		env:      false,
 		provider: FromCgroup,
 	}
+	// TODO: remove this
 	if _, ok := os.LookupEnv(envAUTOMEMLIMIT_DEBUG); ok {
-		cfg.logger.Warn("AUTOMEMLIMIT_DEBUG is deprecated, use slog.Level instead")
+		WithLogger(slog.Default())(cfg)
+		cfg.logger.Warn("AUTOMEMLIMIT_DEBUG is deprecated, use memlimit.WithLogger instead")
 	}
 	for _, opt := range opts {
 		opt(cfg)
 	}
 	defer func() {
 		if _err != nil {
-			cfg.logger.Error(
-				"failed to set GOMEMLIMIT",
-				slog.Any("err", _err),
-			)
+			cfg.logger.Error("failed to set GOMEMLIMIT", slog.Any("error", _err))
 		}
 	}()
 
@@ -103,10 +108,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 		err := recover()
 		if err != nil {
 			if _err != nil {
-				cfg.logger.Error(
-					"failed to set GOMEMLIMIT",
-					slog.Any("error", _err),
-				)
+				cfg.logger.Error("failed to set GOMEMLIMIT", slog.Any("error", _err))
 			}
 			_err = fmt.Errorf("panic during setting the Go's memory limit, rolling back to previous value %d: %v", snapshot, err)
 			debug.SetMemoryLimit(snapshot)
