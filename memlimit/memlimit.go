@@ -90,9 +90,11 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 		provider: FromCgroup,
 	}
 	// TODO: remove this
-	if _, ok := os.LookupEnv(envAUTOMEMLIMIT_DEBUG); ok {
-		WithLogger(slog.Default())(cfg)
-		cfg.logger.Warn("AUTOMEMLIMIT_DEBUG is deprecated, use memlimit.WithLogger instead")
+	if debug, ok := os.LookupEnv(envAUTOMEMLIMIT_DEBUG); ok {
+		slog.Warn("AUTOMEMLIMIT_DEBUG is deprecated, use memlimit.WithLogger instead", slog.String("package", "memlimit"))
+		if debug == "true" {
+			WithLogger(slog.Default())(cfg)
+		}
 	}
 	for _, opt := range opts {
 		opt(cfg)
