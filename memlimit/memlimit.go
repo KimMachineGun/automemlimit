@@ -71,8 +71,15 @@ func WithProvider(provider Provider) Option {
 // Default: slog.New(noopLogger{})
 func WithLogger(logger *slog.Logger) Option {
 	return func(cfg *config) {
-		cfg.logger = logger.With(slog.String("package", "memlimit"))
+		cfg.logger = memlimitLogger(logger)
 	}
+}
+
+func memlimitLogger(logger *slog.Logger) *slog.Logger {
+	if logger == nil {
+		return slog.New(noopLogger{})
+	}
+	return logger.With(slog.String("package", "memlimit"))
 }
 
 // SetGoMemLimitWithOpts sets GOMEMLIMIT with options.
@@ -91,9 +98,10 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	}
 	// TODO: remove this
 	if debug, ok := os.LookupEnv(envAUTOMEMLIMIT_DEBUG); ok {
-		slog.Warn("AUTOMEMLIMIT_DEBUG is deprecated, use memlimit.WithLogger instead", slog.String("package", "memlimit"))
+		logger := memlimitLogger(slog.Default())
+		logger.Warn("AUTOMEMLIMIT_DEBUG is deprecated, use memlimit.WithLogger instead")
 		if debug == "true" {
-			WithLogger(slog.Default())(cfg)
+			cfg.logger = logger
 		}
 	}
 	for _, opt := range opts {
