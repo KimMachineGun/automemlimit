@@ -20,7 +20,7 @@ go get github.com/KimMachineGun/automemlimit@latest
 package main
 
 // By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
-// You can find more details of its behavior from the doc comment of memlimit.SetGoMemLimitWithEnv.
+// This is equivalent to `memlimit.SetGoMemLimitWithOpts(memlimit.WithEnv(), memlimit.WithLogger(slog.Default()))``
 import _ "github.com/KimMachineGun/automemlimit"
 ```
 
@@ -36,6 +36,7 @@ func init() {
 		memlimit.WithRatio(0.9),
 		memlimit.WithEnv(),
 		memlimit.WithProvider(memlimit.FromCgroup),
+		memlimit.WithLogger(slog.Default()),
 	)
 	memlimit.SetGoMemLimitWithEnv()
 	memlimit.SetGoMemLimit(0.9)
