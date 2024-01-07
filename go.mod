@@ -2,7 +2,10 @@ module github.com/KimMachineGun/automemlimit
 
 go 1.21.0
 
-require github.com/containerd/cgroups/v3 v3.0.3
+require (
+	github.com/containerd/cgroups/v3 v3.0.3
+	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
+)
 
 require (
 	github.com/cilium/ebpf v0.11.0 // indirect

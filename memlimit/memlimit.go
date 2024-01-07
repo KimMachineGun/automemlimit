@@ -85,6 +85,9 @@ func memlimitLogger(logger *slog.Logger) *slog.Logger {
 // If AUTOMEMLIMIT is not set, it defaults to 0.9. (10% is the headroom for memory sources the Go runtime is unaware of.)
 // If GOMEMLIMIT is already set or AUTOMEMLIMIT=off, this function does nothing.
 //
+// If AUTOMEMLIMIT_EXPERIMENT is set, it enables experimental features.
+// Please see the documentation of Experiments for more details.
+//
 // Options:
 //   - WithRatio
 //   - WithProvider
@@ -111,6 +114,14 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 			cfg.logger.Error("failed to set GOMEMLIMIT", slog.Any("error", _err))
 		}
 	}()
+
+	exps, err := parseExperiments()
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse experiments: %w", err)
+	}
+	if exps.System {
+		cfg.provider = ApplyFallback(cfg.provider, fromSystem)
+	}
 
 	snapshot := debug.SetMemoryLimit(-1)
 	defer func() {
