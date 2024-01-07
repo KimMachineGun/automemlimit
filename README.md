@@ -34,7 +34,6 @@ import "github.com/KimMachineGun/automemlimit/memlimit"
 func init() {
 	memlimit.SetGoMemLimitWithOpts(
 		memlimit.WithRatio(0.9),
-		memlimit.WithEnv(),
 		memlimit.WithProvider(memlimit.FromCgroup),
 		memlimit.WithLogger(slog.Default()),
 	)

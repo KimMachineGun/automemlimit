@@ -8,7 +8,6 @@ import (
 
 func init() {
 	memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithEnv(),
 		memlimit.WithLogger(slog.Default()),
 	)
 }

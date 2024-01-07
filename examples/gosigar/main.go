@@ -7,7 +7,6 @@ import (
 
 func init() {
 	memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithEnv(),
 		memlimit.WithProvider(
 			memlimit.ApplyFallback(
 				memlimit.FromCgroup,

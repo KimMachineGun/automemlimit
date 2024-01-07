@@ -31,7 +31,6 @@ var (
 type config struct {
 	logger   *slog.Logger
 	ratio    float64
-	env      bool
 	provider Provider
 }
 
@@ -50,10 +49,10 @@ func WithRatio(ratio float64) Option {
 // WithEnv configures whether to use environment variables.
 //
 // Default: false
+//
+// Deprecated: currently this does nothing.
 func WithEnv() Option {
-	return func(cfg *config) {
-		cfg.env = true
-	}
+	return func(cfg *config) {}
 }
 
 // WithProvider configures the provider.
@@ -82,18 +81,22 @@ func memlimitLogger(logger *slog.Logger) *slog.Logger {
 	return logger.With(slog.String("package", "memlimit"))
 }
 
-// SetGoMemLimitWithOpts sets GOMEMLIMIT with options.
+// SetGoMemLimitWithOpts sets GOMEMLIMIT with options and environment variables.
+//
+// You can configure how much memory of the cgroup's memory limit to set as GOMEMLIMIT
+// through AUTOMEMLIMIT envrironment variable in the half-open range (0.0,1.0].
+//
+// If AUTOMEMLIMIT is not set, it defaults to 0.9. (10% is the headroom for memory sources the Go runtime is unaware of.)
+// If GOMEMLIMIT is already set or AUTOMEMLIMIT=off, this function does nothing.
 //
 // Options:
 //   - WithRatio
-//   - WithEnv (see more SetGoMemLimitWithEnv)
 //   - WithProvider
 //   - WithLogger
 func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	cfg := &config{
 		logger:   slog.New(noopLogger{}),
 		ratio:    defaultAUTOMEMLIMIT,
-		env:      false,
 		provider: FromCgroup,
 	}
 	// TODO: remove this
@@ -153,14 +156,8 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	return limit, nil
 }
 
-// SetGoMemLimitWithEnv sets GOMEMLIMIT with the value from the environment variable.
-// You can configure how much memory of the cgroup's memory limit to set as GOMEMLIMIT
-// through AUTOMEMLIMIT in the half-open range (0.0,1.0].
-//
-// If AUTOMEMLIMIT is not set, it defaults to 0.9. (10% is the headroom for memory sources the Go runtime is unaware of.)
-// If GOMEMLIMIT is already set or AUTOMEMLIMIT=off, this function does nothing.
 func SetGoMemLimitWithEnv() {
-	_, _ = SetGoMemLimitWithOpts(WithEnv())
+	_, _ = SetGoMemLimitWithOpts()
 }
 
 // SetGoMemLimit sets GOMEMLIMIT with the value from the cgroup's memory limit and given ratio.

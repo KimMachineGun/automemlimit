@@ -9,7 +9,6 @@ import (
 
 func init() {
 	memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithEnv(),
 		memlimit.WithProvider(
 			memlimit.Limit(1024*1024*1024),
 		),
