@@ -97,7 +97,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 		return 0, fmt.Errorf("failed to parse experiments: %w", err)
 	}
 	if exps.System {
-		cfg.provider = ApplyFallback(cfg.provider, fromSystem)
+		cfg.provider = ApplyFallback(cfg.provider, FromSystem)
 	}
 
 	snapshot := debug.SetMemoryLimit(-1)
