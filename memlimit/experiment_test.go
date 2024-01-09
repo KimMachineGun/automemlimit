@@ -45,6 +45,15 @@ func TestParseExperiments(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			exp, ok := os.LookupEnv(envAUTOMEMLIMIT_EXPERIMENT)
+			t.Cleanup(func() {
+				if ok {
+					os.Setenv(envAUTOMEMLIMIT_EXPERIMENT, exp)
+				} else {
+					os.Unsetenv(envAUTOMEMLIMIT_EXPERIMENT)
+				}
+			})
+
 			os.Setenv("AUTOMEMLIMIT_EXPERIMENT", tt.env)
 			exps, err := parseExperiments()
 			if !reflect.DeepEqual(exps, tt.want) {
