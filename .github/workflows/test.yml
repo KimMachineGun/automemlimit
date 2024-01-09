@@ -15,15 +15,15 @@ jobs:
 
       - name: Pull golang image
         run: |
-          docker pull golang:1.21
+          docker pull golang:1.19
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.21 go test -v ./... -expected=1048576000
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.19 go test -v ./... -expected=1048576000
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.21 go test -v ./... -expected=4530896896
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
 
   test-ubuntu-22_04:
     runs-on: ubuntu-22.04
@@ -37,12 +37,12 @@ jobs:
 
       - name: Pull golang image
         run: |
-          docker pull golang:1.21
+          docker pull golang:1.19
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.21 go test -v ./... -expected=1048576000
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.19 go test -v ./... -expected=1048576000
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.21 go test -v ./... -expected=4530896896
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
