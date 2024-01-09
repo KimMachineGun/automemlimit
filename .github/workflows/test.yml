@@ -25,6 +25,10 @@ jobs:
         run: |
           docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
 
+      - name: Run tests in Go container (system memory limit)
+        run: |
+          docker run --rm -v=$(pwd):/app -w=/app golang:1.19 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024))
+
   test-ubuntu-22_04:
     runs-on: ubuntu-22.04
 
@@ -46,3 +50,7 @@ jobs:
       - name: Run tests in Go container (4321m)
         run: |
           docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
+
+      - name: Run tests in Go container (system memory limit)
+        run: |
+          docker run --rm -v=$(pwd):/app -w=/app golang:1.19 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024))

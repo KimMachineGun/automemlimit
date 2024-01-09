@@ -10,6 +10,10 @@ import (
 )
 
 func TestFromCgroup(t *testing.T) {
+	if expected == 0 {
+		t.Skip()
+	}
+
 	limit, err := FromCgroup()
 	if cgVersion == cgroups.Unavailable && err != ErrNoCgroup {
 		t.Fatalf("FromCgroup() error = %v, wantErr %v", err, ErrNoCgroup)
@@ -24,7 +28,7 @@ func TestFromCgroup(t *testing.T) {
 }
 
 func TestFromCgroupV1(t *testing.T) {
-	if cgVersion != cgroups.Legacy {
+	if expected == 0 || cgVersion != cgroups.Legacy {
 		t.Skip()
 	}
 	limit, err := FromCgroupV1()
@@ -37,7 +41,7 @@ func TestFromCgroupV1(t *testing.T) {
 }
 
 func TestFromCgroupHybrid(t *testing.T) {
-	if cgVersion != cgroups.Hybrid {
+	if expected == 0 || cgVersion != cgroups.Hybrid {
 		t.Skip()
 	}
 	limit, err := FromCgroupHybrid()
@@ -50,7 +54,7 @@ func TestFromCgroupHybrid(t *testing.T) {
 }
 
 func TestFromCgroupV2(t *testing.T) {
-	if cgVersion != cgroups.Unified {
+	if expected == 0 || cgVersion != cgroups.Unified {
 		t.Skip()
 	}
 	limit, err := FromCgroupV2()

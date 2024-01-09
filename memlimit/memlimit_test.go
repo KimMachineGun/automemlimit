@@ -13,12 +13,14 @@ import (
 )
 
 var (
-	cgVersion cgroups.CGMode
-	expected  uint64
+	cgVersion      cgroups.CGMode
+	expected       uint64
+	expectedSystem uint64
 )
 
 func TestMain(m *testing.M) {
 	flag.Uint64Var(&expected, "expected", 0, "Expected cgroup's memory limit")
+	flag.Uint64Var(&expectedSystem, "expected-system", 0, "Expected system memory limit")
 	flag.Parse()
 
 	cgVersion = cgroups.Mode()
@@ -45,7 +47,7 @@ func TestSetGoMemLimit(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.5),
 			wantErr: nil,
-			skip:    cgVersion == cgroups.Unavailable,
+			skip:    expected == 0 || cgVersion == cgroups.Unavailable,
 		},
 		{
 			name: "0.9",
@@ -54,7 +56,7 @@ func TestSetGoMemLimit(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.9),
 			wantErr: nil,
-			skip:    cgVersion == cgroups.Unavailable,
+			skip:    expected == 0 || cgVersion == cgroups.Unavailable,
 		},
 		{
 			name: "Unavailable",
@@ -103,7 +105,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.9),
 			wantErr: nil,
-			skip:    cgVersion == cgroups.Unavailable,
+			skip:    expected == 0 || cgVersion == cgroups.Unavailable,
 		},
 		{
 			name: "FromCgroup_Unavaliable",
@@ -113,7 +115,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			},
 			want:    0,
 			wantErr: ErrNoCgroup,
-			skip:    cgVersion != cgroups.Unavailable,
+			skip:    expected == 0 || cgVersion != cgroups.Unavailable,
 		},
 		{
 			name: "FromCgroupV1",
@@ -123,7 +125,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.9),
 			wantErr: nil,
-			skip:    cgVersion != cgroups.Legacy,
+			skip:    expected == 0 || cgVersion != cgroups.Legacy,
 		},
 		{
 			name: "FromCgroupHybrid",
@@ -133,7 +135,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.9),
 			wantErr: nil,
-			skip:    cgVersion != cgroups.Hybrid,
+			skip:    expected == 0 || cgVersion != cgroups.Hybrid,
 		},
 		{
 			name: "FromCgroupV2",
@@ -143,7 +145,47 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			},
 			want:    int64(float64(expected) * 0.9),
 			wantErr: nil,
-			skip:    cgVersion != cgroups.Unified,
+			skip:    expected == 0 || cgVersion != cgroups.Unified,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.skip {
+				t.Skip()
+			}
+			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
+			if err != tt.wantErr {
+				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetGoMemLimitWithProvider_WithSystemProvider(t *testing.T) {
+	type args struct {
+		provider Provider
+		ratio    float64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    int64
+		wantErr error
+		skip    bool
+	}{
+		{
+			name: "FromSystem",
+			args: args{
+				provider: FromSystem,
+				ratio:    0.9,
+			},
+			want:    int64(float64(expectedSystem) * 0.9),
+			wantErr: nil,
+			skip:    expectedSystem == 0,
 		},
 	}
 	for _, tt := range tests {
