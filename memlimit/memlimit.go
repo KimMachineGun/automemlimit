@@ -133,6 +133,10 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 
 	limit, err := setGoMemLimit(ApplyRatio(cfg.provider, ratio))
 	if err != nil {
+		if errors.Is(err, ErrNoLimit) {
+			cfg.logger.Printf("memory is not limited, skipping: %v\n", err)
+			return 0, nil
+		}
 		return 0, fmt.Errorf("failed to set GOMEMLIMIT: %w", err)
 	}
 

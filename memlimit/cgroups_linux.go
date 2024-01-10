@@ -4,6 +4,8 @@
 package memlimit
 
 import (
+	"math"
+	"os"
 	"path/filepath"
 
 	"github.com/containerd/cgroups/v3"
@@ -42,11 +44,16 @@ func FromCgroupV1() (uint64, error) {
 		return 0, err
 	}
 
-	if limit := metrics.GetMemory().GetHierarchicalMemoryLimit(); limit != 0 {
+	if limit := metrics.GetMemory().GetHierarchicalMemoryLimit(); limit != 0 && limit != getCgroupV1NoLimit() {
 		return limit, nil
 	}
 
 	return 0, ErrNoLimit
+}
+
+func getCgroupV1NoLimit() uint64 {
+	ps := uint64(os.Getpagesize())
+	return math.MaxInt64 / ps * ps
 }
 
 // FromCgroupHybrid returns the memory limit from the cgroup v1 or v2.
@@ -83,7 +90,7 @@ func fromCgroupV2(mountPoint string) (uint64, error) {
 		return 0, err
 	}
 
-	if limit := stats.GetMemory().GetUsageLimit(); limit != 0 {
+	if limit := stats.GetMemory().GetUsageLimit(); limit != 0 && limit != math.MaxUint64 {
 		return limit, nil
 	}
 
