@@ -1,4 +1,4 @@
-module github.com/KimMachineGun/automemlimit/examples/system
+module github.com/KimMachineGun/automemlimit/examples/logger
 
 go 1.21
 
@@ -12,10 +12,11 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
 

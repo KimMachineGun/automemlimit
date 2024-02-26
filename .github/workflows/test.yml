@@ -15,15 +15,15 @@ jobs:
 
       - name: Pull golang image
         run: |
-          docker pull golang:1.19
+          docker pull golang:1.21
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.19 go test -v ./... -expected=1048576000
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.21 go test -v ./... -expected=1048576000
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.21 go test -v ./... -expected=4530896896
 
       - name: Run tests in Go container (system memory limit)
         run: |
@@ -41,16 +41,16 @@ jobs:
 
       - name: Pull golang image
         run: |
-          docker pull golang:1.19
+          docker pull golang:1.21
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.19 go test -v ./... -expected=1048576000
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.21 go test -v ./... -expected=1048576000
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.19 go test -v ./... -expected=4530896896
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.21 go test -v ./... -expected=4530896896
 
       - name: Run tests in Go container (system memory limit)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app golang:1.19 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024))
+          docker run --rm -v=$(pwd):/app -w=/app golang:1.21 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024))
