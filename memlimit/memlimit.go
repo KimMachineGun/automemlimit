@@ -74,7 +74,7 @@ func memlimitLogger(logger *slog.Logger) *slog.Logger {
 	if logger == nil {
 		return slog.New(noopLogger{})
 	}
-	return logger.With(slog.String("package", "memlimit"))
+	return logger.With(slog.String("package", "github.com/KimMachineGun/automemlimit/memlimit"))
 }
 
 // SetGoMemLimitWithOpts sets GOMEMLIMIT with options and environment variables.
