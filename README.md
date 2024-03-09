@@ -54,7 +54,6 @@ func init() {
 			),
 		),
 	)
-	memlimit.SetGoMemLimitWithEnv()
 	memlimit.SetGoMemLimit(0.9)
 	memlimit.SetGoMemLimitWithProvider(memlimit.Limit(1024*1024), 0.9)
 	memlimit.SetGoMemLimitWithProvider(memlimit.FromCgroup, 0.9)

@@ -42,15 +42,6 @@ func WithRatio(ratio float64) Option {
 	}
 }
 
-// WithEnv configures whether to use environment variables.
-//
-// Default: false
-//
-// Deprecated: currently this does nothing.
-func WithEnv() Option {
-	return func(cfg *config) {}
-}
-
 // WithProvider configures the provider.
 //
 // Default: FromCgroup
@@ -68,6 +59,15 @@ func WithLogger(logger *slog.Logger) Option {
 	return func(cfg *config) {
 		cfg.logger = memlimitLogger(logger)
 	}
+}
+
+// WithEnv configures whether to use environment variables.
+//
+// Default: false
+//
+// Deprecated: currently this does nothing.
+func WithEnv() Option {
+	return func(cfg *config) {}
 }
 
 func memlimitLogger(logger *slog.Logger) *slog.Logger {
@@ -168,6 +168,9 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	return limit, nil
 }
 
+// SetGoMemLimitWithEnv sets GOMEMLIMIT with the value from the environment variables.
+// Since WithEnv is deprecated, this function is equivalent to SetGoMemLimitWithOpts().
+// Deprecated: use SetGoMemLimitWithOpts instead.
 func SetGoMemLimitWithEnv() {
 	_, _ = SetGoMemLimitWithOpts()
 }
