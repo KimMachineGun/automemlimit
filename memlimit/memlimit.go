@@ -145,7 +145,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 
 	// check if GOMEMLIMIT is already set
 	if val, ok := os.LookupEnv(envGOMEMLIMIT); ok {
-		cfg.logger.Info("GOMEMLIMIT is set already, skipping", slog.String("GOMEMLIMIT", val))
+		cfg.logger.Info("GOMEMLIMIT is already set, skipping", slog.String(envGOMEMLIMIT, val))
 		return 0, nil
 	}
 
@@ -173,7 +173,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 		return 0, fmt.Errorf("failed to set GOMEMLIMIT: %w", err)
 	}
 
-	cfg.logger.Info("GOMEMLIMIT is set", slog.Int64("GOMEMLIMIT", limit))
+	cfg.logger.Info("GOMEMLIMIT is updated", slog.Int64(envGOMEMLIMIT, limit))
 
 	return limit, nil
 }
