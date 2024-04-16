@@ -153,7 +153,7 @@ func SetGoMemLimitWithOpts(opts ...Option) (_ int64, _err error) {
 	ratio := cfg.ratio
 	if val, ok := os.LookupEnv(envAUTOMEMLIMIT); ok {
 		if val == "off" {
-			cfg.logger.Debug("AUTOMEMLIMIT is set to off, skipping")
+			cfg.logger.Info("AUTOMEMLIMIT is set to off, skipping")
 			return 0, nil
 		}
 		_ratio, err := strconv.ParseFloat(val, 64)
