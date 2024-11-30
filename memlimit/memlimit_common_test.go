@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"math"
 	"runtime/debug"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestLimit(t *testing.T) {
@@ -203,5 +205,95 @@ func TestSetGoMemLimitWithOpts(t *testing.T) {
 				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
 			}
 		})
+	}
+}
+
+func TestSetGoMemLimitWithOpts_rollbackOnPanic(t *testing.T) {
+	t.Cleanup(func() {
+		debug.SetMemoryLimit(math.MaxInt64)
+	})
+
+	limit := int64(987654321)
+	_ = debug.SetMemoryLimit(987654321)
+	_, err := SetGoMemLimitWithOpts(
+		WithProvider(func() (uint64, error) {
+			debug.SetMemoryLimit(123456789)
+			panic("panic")
+		}),
+		WithRatio(1),
+	)
+	if err == nil {
+		t.Error("SetGoMemLimtWithOpts() error = nil, want panic")
+	}
+
+	curr := debug.SetMemoryLimit(-1)
+	if curr != limit {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, limit)
+	}
+}
+
+func TestSetGoMemLimitWithOpts_WithRefreshInterval(t *testing.T) {
+	t.Cleanup(func() {
+		debug.SetMemoryLimit(math.MaxInt64)
+	})
+
+	var limit atomic.Int64
+	output, err := SetGoMemLimitWithOpts(
+		WithProvider(func() (uint64, error) {
+			l := limit.Load()
+			if l == 0 {
+				return 0, ErrNoLimit
+			}
+			return uint64(l), nil
+		}),
+		WithRatio(1),
+		WithRefreshInterval(10*time.Millisecond),
+	)
+	if err != nil {
+		t.Errorf("SetGoMemLimitWithOpts() error = %v", err)
+	} else if output != limit.Load() {
+		t.Errorf("SetGoMemLimitWithOpts() got = %v, want %v", output, limit.Load())
+	}
+
+	// 1. no limit
+	curr := debug.SetMemoryLimit(-1)
+	if curr != math.MaxInt64 {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, limit.Load())
+	}
+
+	// 2. max limit
+	limit.Add(math.MaxInt64)
+	time.Sleep(100 * time.Millisecond)
+
+	curr = debug.SetMemoryLimit(-1)
+	if curr != math.MaxInt64 {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt64)
+	}
+
+	// 3. adjust limit
+	limit.Add(-1024)
+	time.Sleep(100 * time.Millisecond)
+
+	curr = debug.SetMemoryLimit(-1)
+	if curr != math.MaxInt64-1024 {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt64-1024)
+	}
+
+	// 4. no limit again (don't change the limit)
+	limit.Store(0)
+	time.Sleep(100 * time.Millisecond)
+
+	curr = debug.SetMemoryLimit(-1)
+	if curr != math.MaxInt64-1024 {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt64-1024)
+	}
+
+	// 5. new limit
+	limit.Store(math.MaxInt32)
+	time.Sleep(100 * time.Millisecond)
+
+	curr = debug.SetMemoryLimit(-1)
+	if curr != math.MaxInt32 {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt32)
 	}
 }
