@@ -6,7 +6,9 @@ package memlimit
 import (
 	"flag"
 	"log"
+	"math"
 	"os"
+	"runtime/debug"
 	"testing"
 
 	"github.com/containerd/cgroups/v3"
@@ -34,38 +36,42 @@ func TestSetGoMemLimit(t *testing.T) {
 		ratio float64
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr error
-		skip    bool
+		name       string
+		args       args
+		want       int64
+		wantErr    error
+		gomemlimit int64
+		skip       bool
 	}{
 		{
 			name: "0.5",
 			args: args{
 				ratio: 0.5,
 			},
-			want:    int64(float64(expected) * 0.5),
-			wantErr: nil,
-			skip:    expected == 0 || cgVersion == cgroups.Unavailable,
+			want:       int64(float64(expected) * 0.5),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expected) * 0.5),
+			skip:       expected == 0 || cgVersion == cgroups.Unavailable,
 		},
 		{
 			name: "0.9",
 			args: args{
 				ratio: 0.9,
 			},
-			want:    int64(float64(expected) * 0.9),
-			wantErr: nil,
-			skip:    expected == 0 || cgVersion == cgroups.Unavailable,
+			want:       int64(float64(expected) * 0.9),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expected) * 0.9),
+			skip:       expected == 0 || cgVersion == cgroups.Unavailable,
 		},
 		{
 			name: "Unavailable",
 			args: args{
 				ratio: 0.9,
 			},
-			want:    0,
-			wantErr: ErrCgroupsNotSupported,
-			skip:    cgVersion != cgroups.Unavailable,
+			want:       0,
+			wantErr:    ErrCgroupsNotSupported,
+			gomemlimit: math.MaxInt64,
+			skip:       cgVersion != cgroups.Unavailable,
 		},
 	}
 	for _, tt := range tests {
@@ -73,6 +79,9 @@ func TestSetGoMemLimit(t *testing.T) {
 			if tt.skip {
 				t.Skip()
 			}
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
 			got, err := SetGoMemLimit(tt.args.ratio)
 			if err != tt.wantErr {
 				t.Errorf("SetGoMemLimit() error = %v, wantErr %v", err, tt.wantErr)
@@ -80,6 +89,9 @@ func TestSetGoMemLimit(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("SetGoMemLimit() got = %v, want %v", got, tt.want)
+			}
+			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
+				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
 			}
 		})
 	}
@@ -91,11 +103,12 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 		ratio    float64
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr error
-		skip    bool
+		name       string
+		args       args
+		want       int64
+		wantErr    error
+		gomemlimit int64
+		skip       bool
 	}{
 		{
 			name: "FromCgroup",
@@ -103,9 +116,10 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 				provider: FromCgroup,
 				ratio:    0.9,
 			},
-			want:    int64(float64(expected) * 0.9),
-			wantErr: nil,
-			skip:    expected == 0 || cgVersion == cgroups.Unavailable,
+			want:       int64(float64(expected) * 0.9),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expected) * 0.9),
+			skip:       expected == 0 || cgVersion == cgroups.Unavailable,
 		},
 		{
 			name: "FromCgroup_Unavaliable",
@@ -113,9 +127,10 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 				provider: FromCgroup,
 				ratio:    0.9,
 			},
-			want:    0,
-			wantErr: ErrNoCgroup,
-			skip:    expected == 0 || cgVersion != cgroups.Unavailable,
+			want:       0,
+			wantErr:    ErrNoCgroup,
+			gomemlimit: math.MaxInt64,
+			skip:       expected == 0 || cgVersion != cgroups.Unavailable,
 		},
 		{
 			name: "FromCgroupV1",
@@ -123,9 +138,10 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 				provider: FromCgroupV1,
 				ratio:    0.9,
 			},
-			want:    int64(float64(expected) * 0.9),
-			wantErr: nil,
-			skip:    expected == 0 || cgVersion != cgroups.Legacy,
+			want:       int64(float64(expected) * 0.9),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expected) * 0.9),
+			skip:       expected == 0 || cgVersion != cgroups.Legacy,
 		},
 		{
 			name: "FromCgroupHybrid",
@@ -133,9 +149,10 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 				provider: FromCgroupHybrid,
 				ratio:    0.9,
 			},
-			want:    int64(float64(expected) * 0.9),
-			wantErr: nil,
-			skip:    expected == 0 || cgVersion != cgroups.Hybrid,
+			want:       int64(float64(expected) * 0.9),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expected) * 0.9),
+			skip:       expected == 0 || cgVersion != cgroups.Hybrid,
 		},
 		{
 			name: "FromCgroupV2",
@@ -143,9 +160,10 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 				provider: FromCgroupV2,
 				ratio:    0.9,
 			},
-			want:    int64(float64(expected) * 0.9),
-			wantErr: nil,
-			skip:    expected == 0 || cgVersion != cgroups.Unified,
+			want:       int64(float64(expected) * 0.9),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expected) * 0.9),
+			skip:       expected == 0 || cgVersion != cgroups.Unified,
 		},
 	}
 	for _, tt := range tests {
@@ -153,6 +171,9 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			if tt.skip {
 				t.Skip()
 			}
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
 			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
 			if err != tt.wantErr {
 				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
@@ -160,6 +181,9 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
+			}
+			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
+				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
 			}
 		})
 	}
@@ -171,11 +195,12 @@ func TestSetGoMemLimitWithProvider_WithSystemProvider(t *testing.T) {
 		ratio    float64
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr error
-		skip    bool
+		name       string
+		args       args
+		want       int64
+		wantErr    error
+		gomemlimit int64
+		skip       bool
 	}{
 		{
 			name: "FromSystem",
@@ -183,9 +208,10 @@ func TestSetGoMemLimitWithProvider_WithSystemProvider(t *testing.T) {
 				provider: FromSystem,
 				ratio:    0.9,
 			},
-			want:    int64(float64(expectedSystem) * 0.9),
-			wantErr: nil,
-			skip:    expectedSystem == 0,
+			want:       int64(float64(expectedSystem) * 0.9),
+			wantErr:    nil,
+			gomemlimit: int64(float64(expectedSystem) * 0.9),
+			skip:       expectedSystem == 0,
 		},
 	}
 	for _, tt := range tests {
@@ -193,6 +219,9 @@ func TestSetGoMemLimitWithProvider_WithSystemProvider(t *testing.T) {
 			if tt.skip {
 				t.Skip()
 			}
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
 			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
 			if err != tt.wantErr {
 				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
@@ -200,6 +229,9 @@ func TestSetGoMemLimitWithProvider_WithSystemProvider(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
+			}
+			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
+				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
 			}
 		})
 	}
