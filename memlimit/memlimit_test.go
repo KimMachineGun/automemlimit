@@ -279,13 +279,13 @@ func TestSetGoMemLimitWithOpts_WithRefreshInterval(t *testing.T) {
 		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt64-1024)
 	}
 
-	// 4. no limit again (don't change the limit)
+	// 4. no limit again
 	limit.Store(0)
 	time.Sleep(100 * time.Millisecond)
 
 	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64-1024 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt64-1024)
+	if curr != math.MaxInt64 {
+		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt64)
 	}
 
 	// 5. new limit
