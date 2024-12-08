@@ -117,7 +117,7 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 			skip:       expected == 0 || cgVersion == 0,
 		},
 		{
-			name: "FromCgroup_Unavaliable",
+			name: "FromCgroup_Unavailable",
 			args: args{
 				provider: FromCgroup,
 				ratio:    0.9,

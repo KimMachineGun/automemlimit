@@ -223,7 +223,7 @@ func TestSetGoMemLimitWithOpts_rollbackOnPanic(t *testing.T) {
 		WithRatio(1),
 	)
 	if err == nil {
-		t.Error("SetGoMemLimtWithOpts() error = nil, want panic")
+		t.Error("SetGoMemLimitWithOpts() error = nil, want panic")
 	}
 
 	curr := debug.SetMemoryLimit(-1)

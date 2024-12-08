@@ -217,12 +217,12 @@ func readHierarchicalMemoryLimit(path string) (uint64, error) {
 
 		fields := strings.Split(line, " ")
 		if len(fields) < 2 {
-			return 0, fmt.Errorf("failed to parse memory.stat %q: not enough fields", line)
+			return 0, fmt.Errorf("failed to parse memory.stats %q: not enough fields", line)
 		}
 
 		if fields[0] == "hierarchical_memory_limit" {
 			if len(fields) > 2 {
-				return 0, fmt.Errorf("failed to parse memory.stat %q: too many fields for hierarchical_memory_limit", line)
+				return 0, fmt.Errorf("failed to parse memory.stats %q: too many fields for hierarchical_memory_limit", line)
 			}
 			return strconv.ParseUint(fields[1], 10, 64)
 		}
