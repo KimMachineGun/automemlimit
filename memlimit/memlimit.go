@@ -65,8 +65,7 @@ func WithLogger(logger *slog.Logger) Option {
 // If a refresh interval is greater than 0, automemlimit periodically fetches
 // the memory limit from the provider and reapplies it if it has changed.
 // If the provider returns an error, it logs the error and continues.
-// Since ErrNoLimit is also considered as an error (but not logged),
-// you should return math.MaxInt64 if you want to unset the limit.
+// ErrNoLimit is treated as math.MaxInt64.
 //
 // Default: 0 (no refresh)
 func WithRefreshInterval(refresh time.Duration) Option {
@@ -208,6 +207,8 @@ func refresh(provider Provider, logger *slog.Logger, refresh time.Duration) {
 		return
 	}
 
+	provider = noErrNoLimitProvider(provider)
+
 	t := time.NewTicker(refresh)
 	for range t.C {
 		err := func() (_err error) {
@@ -215,7 +216,7 @@ func refresh(provider Provider, logger *slog.Logger, refresh time.Duration) {
 			defer rollbackOnPanic(logger, snapshot, &_err)
 
 			_, err := updateGoMemLimit(uint64(snapshot), provider, logger)
-			if err != nil && !errors.Is(err, ErrNoLimit) {
+			if err != nil {
 				return err
 			}
 
@@ -257,6 +258,16 @@ func SetGoMemLimit(ratio float64) (int64, error) {
 // SetGoMemLimitWithProvider sets GOMEMLIMIT with the value from the given provider and ratio.
 func SetGoMemLimitWithProvider(provider Provider, ratio float64) (int64, error) {
 	return SetGoMemLimitWithOpts(WithProvider(provider), WithRatio(ratio))
+}
+
+func noErrNoLimitProvider(provider Provider) Provider {
+	return func() (uint64, error) {
+		limit, err := provider()
+		if errors.Is(err, ErrNoLimit) {
+			return math.MaxInt64, nil
+		}
+		return limit, err
+	}
 }
 
 func capProvider(provider Provider) Provider {

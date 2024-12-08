@@ -44,7 +44,7 @@ func FileProvider(path string) memlimit.Provider {
 
 		b = bytes.TrimSpace(b)
 		if len(b) == 0 {
-			return memlimit.ApplyFallback(memlimit.FromCgroup, memlimit.FromSystem)()
+			return 0, memlimit.ErrNoLimit
 		}
 
 		return strconv.ParseUint(string(b), 10, 64)
