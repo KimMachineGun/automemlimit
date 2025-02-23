@@ -58,11 +58,6 @@ func TestParseMountInfoLine(t *testing.T) {
 			wantErr: `not enough fields after separator: [ext3]`,
 		},
 		{
-			name:    "too many fields on left side",
-			input:   "36 35 98:0 /mnt1 /mnt2 rw,noatime extra master:1 - ext3 /dev/root rw,errors=continue",
-			wantErr: `too many fields before separator: [36 35 98:0 /mnt1 /mnt2 rw,noatime extra master:1]`,
-		},
-		{
 			name:    "too many fields on right side",
 			input:   "36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw extra",
 			wantErr: `too many fields after separator: [ext3 /dev/root rw extra]`,
@@ -80,6 +75,16 @@ func TestParseMountInfoLine(t *testing.T) {
 				MountPoint:     "/data",
 				FilesystemType: "ext4",
 				SuperOptions:   "rw,relatime",
+			},
+		},
+		{
+			name:  "multiple optional fields on left side (issue #26)",
+			input: "465 34 253:0 / / rw,relatime shared:409 master:1 - xfs /dev/mapper/fedora-root rw,seclabel,attr2,inode64,logbufs=8,logbsize=32k,noquota",
+			want: mountInfo{
+				Root:           "/",
+				MountPoint:     "/",
+				FilesystemType: "xfs",
+				SuperOptions:   "rw,seclabel,attr2,inode64,logbufs=8,logbsize=32k,noquota",
 			},
 		},
 	}
