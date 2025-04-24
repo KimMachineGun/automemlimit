@@ -58,11 +58,6 @@ func TestParseMountInfoLine(t *testing.T) {
 			wantErr: `not enough fields after separator: [ext3]`,
 		},
 		{
-			name:    "too many fields on right side",
-			input:   "36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw extra",
-			wantErr: `too many fields after separator: [ext3 /dev/root rw extra]`,
-		},
-		{
 			name:    "empty line",
 			input:   "",
 			wantErr: `empty line`,
@@ -85,6 +80,16 @@ func TestParseMountInfoLine(t *testing.T) {
 				MountPoint:     "/",
 				FilesystemType: "xfs",
 				SuperOptions:   "rw,seclabel,attr2,inode64,logbufs=8,logbsize=32k,noquota",
+			},
+		},
+		{
+			name:    "super options have spaces (issue #28)",
+			input:   `1391 1160 0:151 / /Docker/host rw,noatime - 9p C:\134Program\040Files\134Docker\134Docker\134resources rw,dirsync,aname=drvfs;path=C:\Program Files\Docker\Docker\resources;symlinkroot=/mnt/,mmap,access=client,msize=65536,trans=fd,rfd=3,wfd=3`,
+			want: mountInfo{
+				Root:           "/",
+				MountPoint:     "/Docker/host",
+				FilesystemType: "9p",
+				SuperOptions:   `rw,dirsync,aname=drvfs;path=C:\Program Files\Docker\Docker\resources;symlinkroot=/mnt/,mmap,access=client,msize=65536,trans=fd,rfd=3,wfd=3`,
 			},
 		},
 	}
