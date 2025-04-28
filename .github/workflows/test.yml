@@ -3,8 +3,8 @@ name: Test
 on: [ push, pull_request ]
 
 jobs:
-  test-ubuntu-20_04:
-    runs-on: ubuntu-20.04
+  test-ubuntu-22_04:
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v3
@@ -19,18 +19,18 @@ jobs:
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.22 go test -v ./... -expected=1048576000 -cgroup-version 1
+          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.22 go test -v ./... -expected=1048576000 -cgroup-version 2
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.22 go test -v ./... -expected=4530896896 -cgroup-version 1
+          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.22 go test -v ./... -expected=4530896896 -cgroup-version 2
 
       - name: Run tests in Go container (system memory limit)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app golang:1.22 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024)) -cgroup-version 1
+          docker run --rm -v=$(pwd):/app -w=/app golang:1.22 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024)) -cgroup-version 2
 
-  test-ubuntu-22_04:
-    runs-on: ubuntu-22.04
+  test-ubuntu-24_04:
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v3
