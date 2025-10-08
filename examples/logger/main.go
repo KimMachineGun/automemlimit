@@ -8,10 +8,7 @@ import (
 )
 
 func init() {
-	memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithProvider(
-			memlimit.Limit(1024*1024*1024),
-		),
+	memlimit.Set(
 		memlimit.WithLogger(slog.New(slog.NewJSONHandler(os.Stderr, nil))),
 	)
 }

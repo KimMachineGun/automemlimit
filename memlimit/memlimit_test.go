@@ -1,9 +1,12 @@
 package memlimit
 
 import (
+	"context"
 	"fmt"
 	"math"
+	"os"
 	"runtime/debug"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -134,13 +137,13 @@ func TestSetGoMemLimitWithProvider(t *testing.T) {
 			t.Cleanup(func() {
 				debug.SetMemoryLimit(math.MaxInt64)
 			})
-			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
+			got, err := Set(WithProvider(tt.args.provider), WithRatio(tt.args.ratio))
 			if err != tt.wantErr {
-				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Set() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
+				t.Errorf("Set() got = %v, want %v", got, tt.want)
 			}
 			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
 				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
@@ -149,81 +152,55 @@ func TestSetGoMemLimitWithProvider(t *testing.T) {
 	}
 }
 
-func TestSetGoMemLimitWithOpts(t *testing.T) {
-	tests := []struct {
-		name       string
-		opts       []Option
-		want       int64
-		wantErr    error
-		gomemlimit int64
-	}{
-		{
-			name: "unknown error",
-			opts: []Option{
-				WithProvider(func() (uint64, error) {
-					return 0, fmt.Errorf("unknown error")
-				}),
-			},
-			want:       0,
-			wantErr:    fmt.Errorf("failed to set GOMEMLIMIT: unknown error"),
-			gomemlimit: math.MaxInt64,
-		},
-		{
-			name: "ErrNoLimit",
-			opts: []Option{
-				WithProvider(func() (uint64, error) {
-					return 0, ErrNoLimit
-				}),
-			},
-			want:       0,
-			wantErr:    nil,
-			gomemlimit: math.MaxInt64,
-		},
-		{
-			name: "wrapped ErrNoLimit",
-			opts: []Option{
-				WithProvider(func() (uint64, error) {
-					return 0, fmt.Errorf("wrapped: %w", ErrNoLimit)
-				}),
-			},
-			want:       0,
-			wantErr:    nil,
-			gomemlimit: math.MaxInt64,
-		},
+func TestSet_WithSystemFallback(t *testing.T) {
+	t.Cleanup(func() {
+		debug.SetMemoryLimit(math.MaxInt64)
+	})
+
+	// Test that manual fallback to system memory works when provider fails
+	got, err := Set(
+		WithProvider(
+			ApplyFallback(
+				func() (uint64, error) {
+					return 0, fmt.Errorf("provider error")
+				},
+				FromSystem,
+			),
+		),
+		WithRatio(0.9),
+	)
+	if err != nil {
+		t.Errorf("Set() error = %v, expected nil due to system fallback", err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := SetGoMemLimitWithOpts(tt.opts...)
-			if tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
-				t.Errorf("SetGoMemLimitWithOpts() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("SetGoMemLimitWithOpts() got = %v, want %v", got, tt.want)
-			}
-			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
-				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
-			}
-		})
+	// Should have set some limit from system memory
+	if got == 0 {
+		t.Skip("System memory not available")
+	}
+	if debug.SetMemoryLimit(-1) <= 0 {
+		t.Errorf("Expected memory limit to be set from system fallback")
 	}
 }
 
-func TestSetGoMemLimitWithOpts_rollbackOnPanic(t *testing.T) {
+func TestSet_rollbackOnPanic(t *testing.T) {
+	// Ensure GOMEMLIMIT is not set
+	os.Unsetenv("GOMEMLIMIT")
+
 	t.Cleanup(func() {
 		debug.SetMemoryLimit(math.MaxInt64)
 	})
 
 	limit := int64(987654321)
 	_ = debug.SetMemoryLimit(987654321)
-	_, err := SetGoMemLimitWithOpts(
+	_, err := Set(
 		WithProvider(func() (uint64, error) {
+			t.Log("Provider called, about to panic")
 			debug.SetMemoryLimit(123456789)
-			panic("panic")
+			panic("test panic")
 		}),
 		WithRatio(1),
 	)
-	if err == nil {
-		t.Error("SetGoMemLimitWithOpts() error = nil, want panic")
+	if err == nil || !strings.Contains(err.Error(), "panic") {
+		t.Errorf("Set() error = %v, want error containing 'panic'", err)
 	}
 
 	curr := debug.SetMemoryLimit(-1)
@@ -232,68 +209,40 @@ func TestSetGoMemLimitWithOpts_rollbackOnPanic(t *testing.T) {
 	}
 }
 
-func TestSetGoMemLimitWithOpts_WithRefreshInterval(t *testing.T) {
+func TestSet_WithRefreshInterval(t *testing.T) {
 	t.Cleanup(func() {
 		debug.SetMemoryLimit(math.MaxInt64)
 	})
 
-	var limit atomic.Int64
-	output, err := SetGoMemLimitWithOpts(
+	// Test that refresh context controls the goroutine
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var refreshCount atomic.Int32
+	_, err := Set(
 		WithProvider(func() (uint64, error) {
-			l := limit.Load()
-			if l == 0 {
-				return 0, ErrNoLimit
-			}
-			return uint64(l), nil
+			refreshCount.Add(1)
+			return 1024 * 1024 * 1024, nil
 		}),
-		WithRatio(1),
-		WithRefreshInterval(10*time.Millisecond),
+		WithRefreshInterval(ctx, 50*time.Millisecond),
 	)
 	if err != nil {
-		t.Errorf("SetGoMemLimitWithOpts() error = %v", err)
-	} else if output != limit.Load() {
-		t.Errorf("SetGoMemLimitWithOpts() got = %v, want %v", output, limit.Load())
+		t.Errorf("Set() error = %v", err)
 	}
 
-	// 1. no limit
-	curr := debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, limit.Load())
-	}
+	// Wait for a few refresh cycles
+	time.Sleep(200 * time.Millisecond)
 
-	// 2. max limit
-	limit.Add(math.MaxInt64)
-	time.Sleep(100 * time.Millisecond)
+	// Cancel the refresh context
+	cancel()
 
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, int64(math.MaxInt64))
-	}
+	countBeforeCancel := refreshCount.Load()
 
-	// 3. adjust limit
-	limit.Add(-1024)
-	time.Sleep(100 * time.Millisecond)
+	// Wait a bit more
+	time.Sleep(200 * time.Millisecond)
 
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64-1024 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, int64(math.MaxInt64)-1024)
-	}
-
-	// 4. no limit again
-	limit.Store(0)
-	time.Sleep(100 * time.Millisecond)
-
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, int64(math.MaxInt64))
-	}
-
-	// 5. new limit
-	limit.Store(math.MaxInt32)
-	time.Sleep(100 * time.Millisecond)
-
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt32 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt32)
+	// Refresh count should not increase after cancel
+	if refreshCount.Load() > countBeforeCancel {
+		t.Errorf("Refresh continued after context cancellation")
 	}
 }

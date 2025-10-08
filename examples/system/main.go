@@ -1,11 +1,9 @@
 package main
 
-import (
-	"github.com/KimMachineGun/automemlimit/memlimit"
-)
+import "github.com/KimMachineGun/automemlimit/memlimit"
 
 func init() {
-	memlimit.SetGoMemLimitWithOpts(
+	memlimit.Set(
 		memlimit.WithProvider(
 			memlimit.ApplyFallback(
 				memlimit.FromCgroup,

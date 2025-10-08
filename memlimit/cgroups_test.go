@@ -83,8 +83,8 @@ func TestParseMountInfoLine(t *testing.T) {
 			},
 		},
 		{
-			name:    "super options have spaces (issue #28)",
-			input:   `1391 1160 0:151 / /Docker/host rw,noatime - 9p C:\134Program\040Files\134Docker\134Docker\134resources rw,dirsync,aname=drvfs;path=C:\Program Files\Docker\Docker\resources;symlinkroot=/mnt/,mmap,access=client,msize=65536,trans=fd,rfd=3,wfd=3`,
+			name:  "super options have spaces (issue #28)",
+			input: `1391 1160 0:151 / /Docker/host rw,noatime - 9p C:\134Program\040Files\134Docker\134Docker\134resources rw,dirsync,aname=drvfs;path=C:\Program Files\Docker\Docker\resources;symlinkroot=/mnt/,mmap,access=client,msize=65536,trans=fd,rfd=3,wfd=3`,
 			want: mountInfo{
 				Root:           "/",
 				MountPoint:     "/Docker/host",

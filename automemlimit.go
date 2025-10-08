@@ -7,7 +7,13 @@ import (
 )
 
 func init() {
-	memlimit.SetGoMemLimitWithOpts(
+	memlimit.Set(
+		memlimit.WithProvider(
+			memlimit.ApplyFallback(
+				memlimit.FromCgroup,
+				memlimit.FromSystem,
+			),
+		),
 		memlimit.WithLogger(slog.Default()),
 	)
 }

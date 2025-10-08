@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"log/slog"
 	"os"
@@ -15,11 +16,12 @@ import (
 func init() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 
-	memlimit.SetGoMemLimitWithOpts(
+	refreshCtx := context.Background()
+	memlimit.Set(
 		memlimit.WithProvider(
 			FileProvider("limit.txt"),
 		),
-		memlimit.WithRefreshInterval(5*time.Second),
+		memlimit.WithRefreshInterval(refreshCtx, 5*time.Second),
 		memlimit.WithLogger(slog.Default()),
 	)
 }
@@ -37,7 +39,7 @@ func FileProvider(path string) memlimit.Provider {
 		b, err := os.ReadFile(path)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return memlimit.ApplyFallback(memlimit.FromCgroup, memlimit.FromSystem)()
+				return memlimit.FromCgroup()
 			}
 			return 0, err
 		}

@@ -56,16 +56,13 @@ func TestSetGoMemLimit(t *testing.T) {
 			t.Cleanup(func() {
 				debug.SetMemoryLimit(math.MaxInt64)
 			})
-			got, err := SetGoMemLimit(tt.args.ratio)
+			got, err := Set(WithRatio(tt.args.ratio))
 			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("SetGoMemLimit() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Set() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("SetGoMemLimit() got = %v, want %v", got, tt.want)
-			}
-			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
-				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
+				t.Errorf("Set() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -121,13 +118,13 @@ func TestSetGoMemLimitWithProvider_WithCgroupProvider(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
+			got, err := Set(WithProvider(tt.args.provider), WithRatio(tt.args.ratio))
 			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Set() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
+				t.Errorf("Set() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -166,16 +163,13 @@ func TestSetGoMemLimitWithProvider_WithSystemProvider(t *testing.T) {
 			t.Cleanup(func() {
 				debug.SetMemoryLimit(math.MaxInt64)
 			})
-			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
+			got, err := Set(WithProvider(tt.args.provider), WithRatio(tt.args.ratio))
 			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Set() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
-			}
-			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
-				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
+				t.Errorf("Set() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

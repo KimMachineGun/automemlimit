@@ -10,11 +10,7 @@ See more details about `GOMEMLIMIT` [here](https://tip.golang.org/doc/gc-guide#M
 
 ## Notice
 
-Version `v0.5.0` introduces a fallback to system memory limits as an experimental feature when cgroup limits are unavailable. Activate this by setting `AUTOMEMLIMIT_EXPERIMENT=system`.
-You can also use system memory limits via `memlimit.FromSystem` provider directly.
-
-This feature is under evaluation and might become a default or be removed based on user feedback.
-If you have any feedback about this feature, please open an issue.
+Version `v1.0.0` introduces breaking changes to simplify the API. The library now provides a single `memlimit.Set` function, and system memory limits are used automatically as a fallback when cgroup limits are unavailable.
 
 ## Installation
 
@@ -28,40 +24,44 @@ go get github.com/KimMachineGun/automemlimit@latest
 package main
 
 // By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
-// This is equivalent to `memlimit.SetGoMemLimitWithOpts(memlimit.WithLogger(slog.Default()))`
-// To disable logging, use `memlimit.SetGoMemLimitWithOpts` directly.
+// System memory is used as a fallback if cgroup is not available.
 import _ "github.com/KimMachineGun/automemlimit"
 ```
+
+> **Note:** The automatic system-memory fallback applies only when you use the convenience import shown above. Calling `memlimit.Set` directly defaults to the cgroup provider; add an explicit fallback if you need it.
 
 or
 
 ```go
 package main
 
-import "github.com/KimMachineGun/automemlimit/memlimit"
+import (
+	"context"
+	"log/slog"
+	"time"
 
-func init() {
-	memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithRatio(0.9),
-		memlimit.WithProvider(memlimit.FromCgroup),
-		memlimit.WithLogger(slog.Default()),
-		memlimit.WithRefreshInterval(1*time.Minute),
-	)
-	memlimit.SetGoMemLimitWithOpts(
-		memlimit.WithRatio(0.9),
+	"github.com/KimMachineGun/automemlimit/memlimit"
+)
+
+func main() {
+	// Set GOMEMLIMIT to 90% of cgroup's memory limit (no automatic fallback)
+	memlimit.Set()
+
+	// With explicit system memory fallback
+	memlimit.Set(
 		memlimit.WithProvider(
-			memlimit.ApplyFallback(
-				memlimit.FromCgroup,
-				memlimit.FromSystem,
-			),
+			memlimit.ApplyFallback(memlimit.FromCgroup, memlimit.FromSystem),
 		),
-		memlimit.WithRefreshInterval(1*time.Minute),
+		memlimit.WithRatio(0.9),
+		memlimit.WithLogger(slog.Default()),
 	)
-	memlimit.SetGoMemLimit(0.9)
-	memlimit.SetGoMemLimitWithProvider(memlimit.Limit(1024*1024), 0.9)
-	memlimit.SetGoMemLimitWithProvider(memlimit.FromCgroup, 0.9)
-	memlimit.SetGoMemLimitWithProvider(memlimit.FromCgroupV1, 0.9)
-	memlimit.SetGoMemLimitWithProvider(memlimit.FromCgroupHybrid, 0.9)
-	memlimit.SetGoMemLimitWithProvider(memlimit.FromCgroupV2, 0.9)
+
+	// With refresh interval
+	refreshCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	memlimit.Set(
+		memlimit.WithRefreshInterval(refreshCtx, 1*time.Minute),
+	)
 }
 ```

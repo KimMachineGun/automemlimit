@@ -14,7 +14,7 @@ func Limit(limit uint64) func() (uint64, error) {
 	}
 }
 
-// ApplyRationA is a helper Provider function that applies the given ratio to the given provider.
+// ApplyRatio is a helper Provider function that applies the given ratio to the given provider.
 func ApplyRatio(provider Provider, ratio float64) Provider {
 	if ratio == 1 {
 		return provider
