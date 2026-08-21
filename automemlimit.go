@@ -1,3 +1,8 @@
+// Package automemlimit automatically sets GOMEMLIMIT based on the cgroup memory limit.
+//
+//	import _ "github.com/KimMachineGun/automemlimit"
+//
+// Use the memlimit package directly for more control.
 package automemlimit
 
 import (
@@ -7,7 +12,7 @@ import (
 )
 
 func init() {
-	memlimit.SetGoMemLimitWithOpts(
+	memlimit.Set(
 		memlimit.WithLogger(slog.Default()),
 	)
 }

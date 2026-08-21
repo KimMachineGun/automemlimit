@@ -1,11 +1,13 @@
 package main
 
 import (
+	"log"
+
 	"github.com/KimMachineGun/automemlimit/memlimit"
 )
 
-func init() {
-	memlimit.SetGoMemLimitWithOpts(
+func main() {
+	_, err := memlimit.Set(
 		memlimit.WithProvider(
 			memlimit.ApplyFallback(
 				memlimit.FromCgroup,
@@ -13,6 +15,7 @@ func init() {
 			),
 		),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
-
-func main() {}

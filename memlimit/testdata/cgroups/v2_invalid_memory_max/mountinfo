@@ -1,0 +1,2 @@
+29 23 0:26 / {{ROOT}}/fs/run/containerd/rootfs/sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw
+30 23 0:27 / {{ROOT}}/fs/run/kubelet/rootfs/sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw

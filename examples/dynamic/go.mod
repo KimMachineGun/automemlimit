@@ -1,8 +1,6 @@
 module github.com/KimMachineGun/automemlimit/examples/dynamic
 
-go 1.22.0
-
-toolchain go1.23.3
+go 1.21.0
 
 require github.com/KimMachineGun/automemlimit v0.0.0
 

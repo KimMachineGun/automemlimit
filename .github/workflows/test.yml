@@ -15,19 +15,23 @@ jobs:
 
       - name: Pull golang image
         run: |
-          docker pull golang:1.22
+          docker pull golang:1.21
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.22 go test -v ./... -expected=1048576000 -cgroup-version 2
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app -m=1000m golang:1.21 go test -v ./... -expected=1048576000
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.22 go test -v ./... -expected=4530896896 -cgroup-version 2
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app -m=4321m golang:1.21 go test -v ./... -expected=4530896896
 
       - name: Run tests in Go container (system memory limit)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app golang:1.22 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024)) -cgroup-version 2
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app golang:1.21 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024))
+
+      - name: Build examples in Go container
+        run: |
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app golang:1.21 sh -c 'set -e; for dir in examples/*; do (cd "$dir" && go build -buildvcs=false -o /tmp/automemlimit-example ./...); done'
 
   test-ubuntu-24_04:
     runs-on: ubuntu-24.04
@@ -41,16 +45,20 @@ jobs:
 
       - name: Pull golang image
         run: |
-          docker pull golang:1.22
+          docker pull golang:1.21
 
       - name: Run tests in Go container (1000m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=1000m golang:1.22 go test -v ./... -expected=1048576000 -cgroup-version 2
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app -m=1000m golang:1.21 go test -v ./... -expected=1048576000
 
       - name: Run tests in Go container (4321m)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app -m=4321m golang:1.22 go test -v ./... -expected=4530896896 -cgroup-version 2
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app -m=4321m golang:1.21 go test -v ./... -expected=4530896896
 
       - name: Run tests in Go container (system memory limit)
         run: |
-          docker run --rm -v=$(pwd):/app -w=/app golang:1.22 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024)) -cgroup-version 2
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app golang:1.21 go test -v ./... -expected-system=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024))
+
+      - name: Build examples in Go container
+        run: |
+          docker run --rm -e GOTOOLCHAIN=local -v=$(pwd):/app -w=/app golang:1.21 sh -c 'set -e; for dir in examples/*; do (cd "$dir" && go build -buildvcs=false -o /tmp/automemlimit-example ./...); done'

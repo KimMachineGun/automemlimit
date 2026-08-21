@@ -1,6 +1,7 @@
 package memlimit
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"runtime/debug"
@@ -9,291 +10,430 @@ import (
 	"time"
 )
 
-func TestLimit(t *testing.T) {
-	type args struct {
-		limit uint64
-	}
+func TestSet(t *testing.T) {
 	tests := []struct {
 		name    string
-		args    args
-		want    uint64
-		wantErr error
+		setup   func(t *testing.T)
+		opts    []Option
+		want    int64
+		wantErr string
 	}{
 		{
-			name: "0bytes",
-			args: args{
-				limit: 0,
-			},
-			want:    0,
-			wantErr: nil,
+			name: "with_provider_1gib_0.9",
+			opts: []Option{WithProvider(Limit(1073741824)), WithRatio(0.9)},
+			want: 966367641,
 		},
 		{
-			name: "1kib",
-			args: args{
-				limit: 1024,
-			},
-			want:    1024,
-			wantErr: nil,
+			name: "with_provider_1gib_1.0",
+			opts: []Option{WithProvider(Limit(1073741824)), WithRatio(1.0)},
+			want: 1073741824,
 		},
 		{
-			name: "1mib",
-			args: args{
-				limit: 1024 * 1024,
-			},
-			want:    1024 * 1024,
-			wantErr: nil,
+			name: "with_provider_maxuint64_capped",
+			opts: []Option{WithProvider(Limit(math.MaxUint64)), WithRatio(0.9)},
+			want: math.MaxInt64,
 		},
 		{
-			name: "1gib",
-			args: args{
-				limit: 1024 * 1024 * 1024,
-			},
-			want:    1024 * 1024 * 1024,
-			wantErr: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := Limit(tt.args.limit)()
-			if err != tt.wantErr {
-				t.Errorf("Limit() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("Limit() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSetGoMemLimitWithProvider(t *testing.T) {
-	type args struct {
-		provider Provider
-		ratio    float64
-	}
-	tests := []struct {
-		name       string
-		args       args
-		want       int64
-		wantErr    error
-		gomemlimit int64
-	}{
-		{
-			name: "Limit_0.5",
-			args: args{
-				provider: Limit(1024 * 1024 * 1024),
-				ratio:    0.5,
-			},
-			want:       536870912,
-			wantErr:    nil,
-			gomemlimit: 536870912,
+			name: "with_min_after_ratio",
+			opts: []Option{WithProvider(Limit(1000)), WithRatio(0.5), WithMin(700)},
+			want: 700,
 		},
 		{
-			name: "Limit_0.9",
-			args: args{
-				provider: Limit(1024 * 1024 * 1024),
-				ratio:    0.9,
+			name: "gomemlimit_env",
+			setup: func(t *testing.T) {
+				debug.SetMemoryLimit(104857600)
+				t.Setenv("GOMEMLIMIT", "100MiB")
 			},
-			want:       966367641,
-			wantErr:    nil,
-			gomemlimit: 966367641,
+			opts: []Option{
+				WithProvider(Limit(1024 * 1024 * 1024)),
+				WithRatio(0.9),
+			},
+			want: 104857600,
 		},
 		{
-			name: "Limit_0.9_math.MaxUint64",
-			args: args{
-				provider: Limit(math.MaxUint64),
-				ratio:    0.9,
-			},
-			want:       math.MaxInt64,
-			wantErr:    nil,
-			gomemlimit: math.MaxInt64,
-		},
-		{
-			name: "Limit_0.9_math.MaxUint64",
-			args: args{
-				provider: Limit(math.MaxUint64),
-				ratio:    0.9,
-			},
-			want:       math.MaxInt64,
-			wantErr:    nil,
-			gomemlimit: math.MaxInt64,
-		},
-		{
-			name: "Limit_0.45_math.MaxUint64",
-			args: args{
-				provider: Limit(math.MaxUint64),
-				ratio:    0.45,
-			},
-			want:       8301034833169298432,
-			wantErr:    nil,
-			gomemlimit: 8301034833169298432,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Cleanup(func() {
+			name: "provider_error",
+			setup: func(t *testing.T) {
 				debug.SetMemoryLimit(math.MaxInt64)
-			})
-			got, err := SetGoMemLimitWithProvider(tt.args.provider, tt.args.ratio)
-			if err != tt.wantErr {
-				t.Errorf("SetGoMemLimitWithProvider() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("SetGoMemLimitWithProvider() got = %v, want %v", got, tt.want)
-			}
-			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
-				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
-			}
-		})
-	}
-}
-
-func TestSetGoMemLimitWithOpts(t *testing.T) {
-	tests := []struct {
-		name       string
-		opts       []Option
-		want       int64
-		wantErr    error
-		gomemlimit int64
-	}{
-		{
-			name: "unknown error",
+			},
 			opts: []Option{
 				WithProvider(func() (uint64, error) {
-					return 0, fmt.Errorf("unknown error")
+					return 0, fmt.Errorf("provider failed")
 				}),
 			},
-			want:       0,
-			wantErr:    fmt.Errorf("failed to set GOMEMLIMIT: unknown error"),
-			gomemlimit: math.MaxInt64,
+			want:    math.MaxInt64,
+			wantErr: "failed to set GOMEMLIMIT: provider failed",
 		},
 		{
-			name: "ErrNoLimit",
+			name: "err_no_limit",
+			setup: func(t *testing.T) {
+				debug.SetMemoryLimit(500 * 1024 * 1024)
+			},
 			opts: []Option{
 				WithProvider(func() (uint64, error) {
 					return 0, ErrNoLimit
 				}),
 			},
-			want:       0,
-			wantErr:    nil,
-			gomemlimit: math.MaxInt64,
+			want: math.MaxInt64,
 		},
 		{
-			name: "wrapped ErrNoLimit",
+			name: "wrapped_err_no_limit",
+			setup: func(t *testing.T) {
+				debug.SetMemoryLimit(500 * 1024 * 1024)
+			},
 			opts: []Option{
 				WithProvider(func() (uint64, error) {
 					return 0, fmt.Errorf("wrapped: %w", ErrNoLimit)
 				}),
 			},
-			want:       0,
-			wantErr:    nil,
-			gomemlimit: math.MaxInt64,
+			want: math.MaxInt64,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SetGoMemLimitWithOpts(tt.opts...)
-			if tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
-				t.Errorf("SetGoMemLimitWithOpts() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
+			if tt.setup != nil {
+				tt.setup(t)
 			}
+
+			got, err := Set(tt.opts...)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("Set() error = %v, want nil", err)
+				}
+			} else if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("Set() error = %v, want error %q", err, tt.wantErr)
+			}
+
 			if got != tt.want {
-				t.Errorf("SetGoMemLimitWithOpts() got = %v, want %v", got, tt.want)
+				t.Fatalf("Set() = %v, want %v", got, tt.want)
 			}
-			if debug.SetMemoryLimit(-1) != tt.gomemlimit {
-				t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", debug.SetMemoryLimit(-1), tt.gomemlimit)
+			actual := debug.SetMemoryLimit(-1)
+			if actual != tt.want {
+				t.Fatalf("GOMEMLIMIT = %v, want %v", actual, tt.want)
 			}
 		})
 	}
 }
 
-func TestSetGoMemLimitWithOpts_rollbackOnPanic(t *testing.T) {
-	t.Cleanup(func() {
-		debug.SetMemoryLimit(math.MaxInt64)
-	})
-
-	limit := int64(987654321)
-	_ = debug.SetMemoryLimit(987654321)
-	_, err := SetGoMemLimitWithOpts(
-		WithProvider(func() (uint64, error) {
-			debug.SetMemoryLimit(123456789)
-			panic("panic")
-		}),
-		WithRatio(1),
-	)
-	if err == nil {
-		t.Error("SetGoMemLimitWithOpts() error = nil, want panic")
+func TestSetAUTOMEMLIMIT(t *testing.T) {
+	tests := []struct {
+		name    string
+		env     string
+		limit   uint64
+		want    int64
+		wantErr string
+	}{
+		{
+			name:  "0.9",
+			env:   "0.9",
+			limit: 1000,
+			want:  900,
+		},
+		{
+			name:  "1.0",
+			env:   "1.0",
+			limit: 1000,
+			want:  1000,
+		},
+		{
+			name:  "off",
+			env:   "off",
+			limit: 1000,
+			want:  math.MaxInt64,
+		},
+		{
+			name:    "invalid",
+			env:     "invalid",
+			limit:   1000,
+			want:    math.MaxInt64,
+			wantErr: "cannot parse AUTOMEMLIMIT: invalid",
+		},
+		{
+			name:    "zero",
+			env:     "0",
+			limit:   1000,
+			want:    math.MaxInt64,
+			wantErr: "failed to set GOMEMLIMIT: invalid ratio: 0.000000, ratio should be in the range (0.0,1.0]",
+		},
+		{
+			name:    "over_1",
+			env:     "1.5",
+			limit:   1000,
+			want:    math.MaxInt64,
+			wantErr: "failed to set GOMEMLIMIT: invalid ratio: 1.500000, ratio should be in the range (0.0,1.0]",
+		},
+		{
+			name:    "nan",
+			env:     "NaN",
+			limit:   1000,
+			want:    math.MaxInt64,
+			wantErr: "failed to set GOMEMLIMIT: invalid ratio: NaN, ratio should be in the range (0.0,1.0]",
+		},
 	}
 
-	curr := debug.SetMemoryLimit(-1)
-	if curr != limit {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, limit)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
+			t.Setenv("AUTOMEMLIMIT", tt.env)
+
+			debug.SetMemoryLimit(math.MaxInt64)
+
+			got, err := Set(WithProvider(Limit(tt.limit)))
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("Set() error = %v, want nil", err)
+				}
+			} else if err == nil || err.Error() != tt.wantErr {
+				t.Fatalf("Set() error = %v, want error %q", err, tt.wantErr)
+			}
+
+			if got != tt.want {
+				t.Fatalf("Set() = %v, want %v", got, tt.want)
+			}
+			actual := debug.SetMemoryLimit(-1)
+			if actual != tt.want {
+				t.Fatalf("GOMEMLIMIT = %v, want %v", actual, tt.want)
+			}
+		})
 	}
 }
 
-func TestSetGoMemLimitWithOpts_WithRefreshInterval(t *testing.T) {
+func waitForGoMemLimit(t *testing.T, want int64) {
+	t.Helper()
+
+	deadline := time.Now().Add(time.Second)
+	for {
+		got := debug.SetMemoryLimit(-1)
+		if got == want {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("GOMEMLIMIT = %v, want %v", got, want)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func waitForRefresh(t *testing.T, done <-chan struct{}) {
+	t.Helper()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("refresh did not stop after context cancellation")
+	}
+}
+
+func TestSetRefresh(t *testing.T) {
 	t.Cleanup(func() {
 		debug.SetMemoryLimit(math.MaxInt64)
 	})
 
-	var limit atomic.Int64
-	output, err := SetGoMemLimitWithOpts(
-		WithProvider(func() (uint64, error) {
-			l := limit.Load()
-			if l == 0 {
-				return 0, ErrNoLimit
-			}
-			return uint64(l), nil
-		}),
-		WithRatio(1),
-		WithRefreshInterval(10*time.Millisecond),
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	limits := make(chan uint64, 2)
+	limits <- 1000
+	provider := func() (uint64, error) {
+		select {
+		case limit := <-limits:
+			return limit, nil
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		}
+	}
+
+	got, err := Set(
+		WithProvider(provider),
+		WithRatio(0.5),
+		WithRefreshInterval(ctx, 10*time.Millisecond),
 	)
 	if err != nil {
-		t.Errorf("SetGoMemLimitWithOpts() error = %v", err)
-	} else if output != limit.Load() {
-		t.Errorf("SetGoMemLimitWithOpts() got = %v, want %v", output, limit.Load())
+		t.Fatalf("Set() error = %v, want nil", err)
+	}
+	if got != 500 {
+		t.Fatalf("Set() = %v, want %v", got, 500)
 	}
 
-	// 1. no limit
-	curr := debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, limit.Load())
+	limits <- 4000
+	waitForGoMemLimit(t, 2000)
+}
+
+func TestRefreshContinuesAfterProviderError(t *testing.T) {
+	t.Cleanup(func() {
+		debug.SetMemoryLimit(math.MaxInt64)
+	})
+	debug.SetMemoryLimit(500)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	recoveryStarted := make(chan struct{})
+	allowRecovery := make(chan struct{}, 1)
+	var callCount int
+	provider := func() (uint64, error) {
+		callCount++
+		switch callCount {
+		case 1:
+			return 0, fmt.Errorf("provider failed")
+		case 2:
+			close(recoveryStarted)
+			<-allowRecovery
+		}
+		return 2000, nil
 	}
 
-	// 2. max limit
-	limit.Add(math.MaxInt64)
-	time.Sleep(100 * time.Millisecond)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		refresh(ctx, provider, memlimitLogger(nil), 10*time.Millisecond)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case allowRecovery <- struct{}{}:
+		default:
+		}
+		waitForRefresh(t, done)
+	})
 
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, int64(math.MaxInt64))
+	select {
+	case <-recoveryStarted:
+	case <-time.After(time.Second):
+		t.Fatal("provider retry did not occur")
+	}
+	if got := debug.SetMemoryLimit(-1); got != 500 {
+		t.Fatalf("GOMEMLIMIT after provider error = %v, want %v", got, 500)
 	}
 
-	// 3. adjust limit
-	limit.Add(-1024)
-	time.Sleep(100 * time.Millisecond)
+	allowRecovery <- struct{}{}
+	waitForGoMemLimit(t, 2000)
+	cancel()
+	waitForRefresh(t, done)
+}
 
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64-1024 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, int64(math.MaxInt64)-1024)
+func TestSetRefreshAfterInitialError(t *testing.T) {
+	t.Cleanup(func() {
+		debug.SetMemoryLimit(math.MaxInt64)
+	})
+
+	snapshot := int64(123456789)
+	wantErr := "failed to set GOMEMLIMIT: provider failed"
+	debug.SetMemoryLimit(snapshot)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var callCount atomic.Int32
+	got, err := Set(
+		WithProvider(func() (uint64, error) {
+			switch callCount.Add(1) {
+			case 1:
+				return 0, fmt.Errorf("provider failed")
+			case 2:
+				return 1000, nil
+			default:
+				<-ctx.Done()
+				return 0, ctx.Err()
+			}
+		}),
+		WithRatio(1),
+		WithRefreshInterval(ctx, 10*time.Millisecond),
+	)
+	if err == nil || err.Error() != wantErr {
+		t.Fatalf("Set() error = %v, want error %q", err, wantErr)
+	}
+	if got != snapshot {
+		t.Fatalf("Set() = %v, want %v", got, snapshot)
 	}
 
-	// 4. no limit again
-	limit.Store(0)
-	time.Sleep(100 * time.Millisecond)
+	waitForGoMemLimit(t, 1000)
+}
 
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt64 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, int64(math.MaxInt64))
+func TestSetRefreshDisabled(t *testing.T) {
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		interval time.Duration
+	}{
+		{name: "nil_context", interval: 10 * time.Millisecond},
+		{name: "canceled_context", ctx: canceledCtx, interval: 10 * time.Millisecond},
+		{name: "zero_interval", ctx: context.Background()},
 	}
 
-	// 5. new limit
-	limit.Store(math.MaxInt32)
-	time.Sleep(100 * time.Millisecond)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
 
-	curr = debug.SetMemoryLimit(-1)
-	if curr != math.MaxInt32 {
-		t.Errorf("debug.SetMemoryLimit(-1) got = %v, want %v", curr, math.MaxInt32)
+			calls := make(chan struct{}, 2)
+			_, err := Set(
+				WithProvider(func() (uint64, error) {
+					calls <- struct{}{}
+					return 1000, nil
+				}),
+				WithRatio(1),
+				WithRefreshInterval(tt.ctx, tt.interval),
+			)
+			if err != nil {
+				t.Fatalf("Set() error = %v, want nil", err)
+			}
+
+			<-calls
+			select {
+			case <-calls:
+				t.Fatal("provider was called after the initial update")
+			case <-time.After(30 * time.Millisecond):
+			}
+		})
+	}
+}
+
+func TestSetSkipDoesNotStartRefresh(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		val  string
+	}{
+		{name: "gomemlimit", env: envGOMEMLIMIT, val: "100MiB"},
+		{name: "automemlimit_off", env: envAUTOMEMLIMIT, val: "off"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				debug.SetMemoryLimit(math.MaxInt64)
+			})
+			t.Setenv(tt.env, tt.val)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+
+			called := make(chan struct{}, 1)
+			_, err := Set(
+				WithProvider(func() (uint64, error) {
+					called <- struct{}{}
+					return 1000, nil
+				}),
+				WithRefreshInterval(ctx, 10*time.Millisecond),
+			)
+			if err != nil {
+				t.Fatalf("Set() error = %v, want nil", err)
+			}
+
+			select {
+			case <-called:
+				t.Fatal("provider was called")
+			case <-time.After(30 * time.Millisecond):
+			}
+		})
 	}
 }

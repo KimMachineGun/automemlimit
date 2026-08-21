@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -12,27 +14,28 @@ import (
 	"github.com/KimMachineGun/automemlimit/memlimit"
 )
 
-func init() {
+func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 
-	memlimit.SetGoMemLimitWithOpts(
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	_, err := memlimit.Set(
 		memlimit.WithProvider(
-			FileProvider("limit.txt"),
+			fileProvider("limit.txt"),
 		),
-		memlimit.WithRefreshInterval(5*time.Second),
+		memlimit.WithRefreshInterval(ctx, 5*time.Second),
 		memlimit.WithLogger(slog.Default()),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	<-ctx.Done()
+	slog.Info("shutdown")
 }
 
-func main() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	s := <-c
-	slog.Info("signal captured", slog.Any("signal", s))
-}
-
-func FileProvider(path string) memlimit.Provider {
+func fileProvider(path string) memlimit.Provider {
 	return func() (uint64, error) {
 		b, err := os.ReadFile(path)
 		if err != nil {
