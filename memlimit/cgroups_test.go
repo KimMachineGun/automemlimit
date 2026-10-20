@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"testing"
 )
@@ -432,6 +433,7 @@ type mountSpec struct {
 	root           string
 	filesystemType string
 	superOptions   string
+	deniedPath     string
 	files          []fileSpec
 }
 
@@ -450,6 +452,25 @@ func buildMountInfos(t *testing.T, mounts []mountSpec) []mountInfo {
 			if err := os.WriteFile(path, []byte(file.content), 0o644); err != nil {
 				t.Fatalf("WriteFile(%s) error = %v, want nil", file.path, err)
 			}
+		}
+
+		if mount.deniedPath != "" {
+			if runtime.GOOS != "linux" || os.Geteuid() == 0 {
+				t.Skip("requires unprivileged Linux permission checks")
+			}
+			path := filepath.Join(mountPoint, mount.deniedPath)
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chmod(path, 0); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := os.Chmod(path, info.Mode().Perm()); err != nil {
+					t.Error(err)
+				}
+			})
 		}
 
 		mis = append(mis, mountInfo{
@@ -472,6 +493,154 @@ func TestGetMemoryLimitV2FromControllerPath(t *testing.T) {
 		wantErrIs error
 		wantErr   string
 	}{
+		{
+			name:    "permission_before_parse_error",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     ".",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "invalid\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+			},
+			wantErr: "failed to parse memory.max value: strconv.ParseUint: parsing \"invalid\": invalid syntax",
+		},
+		{
+			name:    "permission_in_parent_memory_max",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     "pod/memory.max",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+						{path: "pod/memory.max", content: "512\n"},
+					},
+				},
+			},
+			wantErrIs: os.ErrPermission,
+		},
+		{
+			name:    "permission_before_readable",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     ".",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+			},
+			want: 1024,
+		},
+		{
+			name:    "permission_after_readable",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     ".",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+			},
+			want: 1024,
+		},
+		{
+			name:    "permission_with_unlimited",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     ".",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "max\n"},
+					},
+				},
+			},
+			wantErrIs: ErrNoLimit,
+		},
+		{
+			name:    "permission_only",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     ".",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+			},
+			wantErrIs: os.ErrPermission,
+		},
+		{
+			name:    "permission_does_not_fall_back_to_narrower_mount",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup2",
+					deniedPath:     ".",
+					files: []fileSpec{
+						{path: "pod/abc/memory.max", content: "1024\n"},
+					},
+				},
+				{
+					root:           "/pod",
+					filesystemType: "cgroup2",
+					files: []fileSpec{
+						{path: "abc/memory.max", content: "2048\n"},
+					},
+				},
+			},
+			wantErrIs: os.ErrPermission,
+		},
 		{
 			name:    "returns_limit_from_valid_candidate",
 			relPath: "/pod/abc",
@@ -700,6 +869,54 @@ func TestGetMemoryLimitV1FromControllerPath(t *testing.T) {
 		wantErrIs error
 		wantErr   string
 	}{
+		{
+			name:    "permission_in_memory_stat_uses_readable_peer",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup",
+					superOptions:   "rw,memory",
+					deniedPath:     "pod/abc/memory.stat",
+					files: []fileSpec{
+						{path: "pod/abc/memory.stat", content: "hierarchical_memory_limit 1024\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup",
+					superOptions:   "rw,memory",
+					files: []fileSpec{
+						{path: "pod/abc/memory.stat", content: "hierarchical_memory_limit 1024\n"},
+					},
+				},
+			},
+			want: 1024,
+		},
+		{
+			name:    "permission_in_limit_uses_readable_peer",
+			relPath: "/pod/abc",
+			mounts: []mountSpec{
+				{
+					root:           "/",
+					filesystemType: "cgroup",
+					superOptions:   "rw,memory",
+					files: []fileSpec{
+						{path: "pod/abc/memory.stat", content: "hierarchical_memory_limit 1024\n"},
+					},
+				},
+				{
+					root:           "/",
+					filesystemType: "cgroup",
+					superOptions:   "rw,memory",
+					deniedPath:     "pod/abc/memory.limit_in_bytes",
+					files: []fileSpec{
+						{path: "pod/abc/memory.limit_in_bytes", content: "1024\n"},
+					},
+				},
+			},
+			want: 1024,
+		},
 		{
 			name:    "returns_limit_from_valid_candidate",
 			relPath: "/pod/abc",
