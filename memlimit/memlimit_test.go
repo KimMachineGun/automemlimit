@@ -51,6 +51,29 @@ func TestSet(t *testing.T) {
 			want: 104857600,
 		},
 		{
+			name: "gomemlimit_env_empty",
+			setup: func(t *testing.T) {
+				t.Setenv("GOMEMLIMIT", "")
+			},
+			opts: []Option{
+				WithProvider(Limit(1024 * 1024 * 1024)),
+				WithRatio(0.9),
+			},
+			want: 966367641,
+		},
+		{
+			name: "gomemlimit_env_off",
+			setup: func(t *testing.T) {
+				debug.SetMemoryLimit(104857600)
+				t.Setenv("GOMEMLIMIT", "off")
+			},
+			opts: []Option{
+				WithProvider(Limit(1024 * 1024 * 1024)),
+				WithRatio(0.9),
+			},
+			want: 104857600,
+		},
+		{
 			name: "provider_error",
 			setup: func(t *testing.T) {
 				debug.SetMemoryLimit(math.MaxInt64)
