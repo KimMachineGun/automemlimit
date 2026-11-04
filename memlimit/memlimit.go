@@ -122,7 +122,7 @@ func Set(opts ...Option) (_limit int64, _err error) {
 
 	snapshot := debug.SetMemoryLimit(-1)
 
-	if val, ok := os.LookupEnv(envGOMEMLIMIT); ok && val != "" {
+	if val := os.Getenv(envGOMEMLIMIT); val != "" {
 		cfg.logger.Info("GOMEMLIMIT is already set, skipping", slog.String(envGOMEMLIMIT, val))
 		return snapshot, nil
 	}
